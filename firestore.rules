@@ -1,0 +1,116 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ──────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isReviewer() {
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'reviewer';
+    }
+
+    function isVendor() {
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'vendor';
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isBidOpen(bidId) {
+      let bid = get(/databases/$(database)/documents/bids/$(bidId));
+      return bid.data.status in ['published', 'bidding']
+        && request.time < bid.data.biddingDeadline;
+    }
+
+    // ─── Users ─────────────────────────────────────────────────────────
+
+    match /users/{uid} {
+      allow read: if isAdmin() || isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isAdmin() || (isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+      allow delete: if isAdmin();
+    }
+
+    // ─── Projects ──────────────────────────────────────────────────────
+
+    match /projects/{projectId} {
+      allow read: if isAdmin()
+        || (resource.data.isPublished == true);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ─── Articles ──────────────────────────────────────────────────────
+
+    match /articles/{articleId} {
+      allow read: if isAdmin()
+        || (resource.data.isPublished == true);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ─── Bids ──────────────────────────────────────────────────────────
+
+    match /bids/{bidId} {
+      allow read: if isAdmin() || isReviewer()
+        || (isVendor() && resource.data.status in ['published', 'bidding', 'closed', 'awarded']);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ─── Bid Submissions ───────────────────────────────────────────────
+
+    match /bidSubmissions/{submissionId} {
+      // Vendor can only see own submissions; admin and reviewers see all
+      allow read: if isAdmin() || isReviewer()
+        || (isVendor() && resource.data.vendorId == request.auth.uid);
+
+      // Vendor can create submission only while bid is open
+      allow create: if isVendor()
+        && request.resource.data.vendorId == request.auth.uid
+        && isBidOpen(request.resource.data.bidId);
+
+      // Vendor can update own submission only while bid is open
+      allow update: if isAdmin()
+        || (isVendor()
+            && resource.data.vendorId == request.auth.uid
+            && isBidOpen(resource.data.bidId));
+
+      allow delete: if isAdmin();
+    }
+
+    // ─── Evaluations ──────────────────────────────────────────────────
+
+    match /evaluations/{evaluationId} {
+      allow read: if isAdmin() || isReviewer();
+      allow create: if isReviewer();
+      allow update: if isAdmin()
+        || (isReviewer() && resource.data.reviewerId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // ─── Contacts ──────────────────────────────────────────────────────
+
+    match /contacts/{contactId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ─── Site Settings ─────────────────────────────────────────────────
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

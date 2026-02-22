@@ -1,0 +1,68 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ─── Helper Functions ──────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isReviewer() {
+      return isAuthenticated()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'reviewer';
+    }
+
+    function isVendor() {
+      return isAuthenticated()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'vendor';
+    }
+
+    // ─── Project Images ────────────────────────────────────────────────
+    // Public read; only admins can write
+
+    match /projects/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── Article Images ────────────────────────────────────────────────
+    // Public read; only admins can write
+
+    match /articles/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── Vendor Files ──────────────────────────────────────────────────
+    // Vendor can upload to own folder; admin can read all vendor files
+
+    match /vendors/{uid}/{allPaths=**} {
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == uid);
+      allow write: if isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // ─── Bid Documents ─────────────────────────────────────────────────
+    // Uploading vendor and admins/reviewers can read; vendor writes to own path
+
+    match /bid-documents/{bidId}/{vendorId}/{allPaths=**} {
+      allow read: if isAdmin() || isReviewer()
+        || (isAuthenticated() && request.auth.uid == vendorId);
+      allow write: if isVendor() && request.auth.uid == vendorId;
+    }
+
+    // ─── Public Assets ─────────────────────────────────────────────────
+    // Site-wide static assets (hero slides, logos, etc.)
+
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
