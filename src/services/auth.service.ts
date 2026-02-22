@@ -6,11 +6,11 @@ import {
   updateProfile,
 } from 'firebase/auth'
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
-import { auth, db } from '@/config/firebase'
+import { requireAuth, requireDb } from '@/config/firebase'
 import type { UserRole } from '@/types/user'
 
 export async function signIn(email: string, password: string) {
-  return signInWithEmailAndPassword(auth, email, password)
+  return signInWithEmailAndPassword(requireAuth(), email, password)
 }
 
 export async function signUp(
@@ -20,6 +20,9 @@ export async function signUp(
   phone: string,
   role: UserRole = 'vendor',
 ) {
+  const auth = requireAuth()
+  const db = requireDb()
+
   const credential = await createUserWithEmailAndPassword(auth, email, password)
 
   await updateProfile(credential.user, { displayName })
@@ -38,9 +41,9 @@ export async function signUp(
 }
 
 export async function signOut() {
-  return firebaseSignOut(auth)
+  return firebaseSignOut(requireAuth())
 }
 
 export async function resetPassword(email: string) {
-  return sendPasswordResetEmail(auth, email)
+  return sendPasswordResetEmail(requireAuth(), email)
 }

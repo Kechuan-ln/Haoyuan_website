@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import type { User } from 'firebase/auth'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
-import { auth, db } from '@/config/firebase'
+import { auth, db, isFirebaseConfigured } from '@/config/firebase'
 import type { AppUser } from '@/types/user'
 
 interface AuthContextValue {
@@ -27,12 +27,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // If Firebase is not configured, skip auth listener and just mark as loaded
+    if (!isFirebaseConfigured || !auth) {
+      setLoading(false)
+      return
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
       setError(null)
 
       if (firebaseUser) {
         try {
+          if (!db) {
+            setAppUser(null)
+            setError('数据库未配置')
+            setLoading(false)
+            return
+          }
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
           if (userDoc.exists()) {
             setAppUser(userDoc.data() as AppUser)

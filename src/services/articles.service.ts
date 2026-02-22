@@ -14,7 +14,7 @@ import {
   where,
 } from 'firebase/firestore'
 import type { DocumentSnapshot, UpdateData } from 'firebase/firestore'
-import { db } from '@/config/firebase'
+import { requireDb } from '@/config/firebase'
 import type { Article, ArticleCategory } from '@/types/article'
 
 const ARTICLES = 'articles'
@@ -34,6 +34,7 @@ export interface PaginatedArticles {
 export async function getArticles(
   filters?: ArticleFilters,
 ): Promise<PaginatedArticles> {
+  const db = requireDb()
   const constraints = []
 
   if (filters?.category) {
@@ -64,6 +65,7 @@ export async function getArticles(
 }
 
 export async function getArticle(id: string): Promise<Article | null> {
+  const db = requireDb()
   const snap = await getDoc(doc(db, ARTICLES, id))
   if (!snap.exists()) return null
   return { id: snap.id, ...snap.data() } as Article
@@ -72,6 +74,7 @@ export async function getArticle(id: string): Promise<Article | null> {
 export async function createArticle(
   data: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
+  const db = requireDb()
   const ref = await addDoc(collection(db, ARTICLES), {
     ...data,
     createdAt: serverTimestamp(),
@@ -84,6 +87,7 @@ export async function updateArticle(
   id: string,
   data: Partial<Omit<Article, 'id' | 'createdAt'>>,
 ): Promise<void> {
+  const db = requireDb()
   await updateDoc(doc(db, ARTICLES, id), {
     ...data,
     updatedAt: serverTimestamp(),
@@ -91,5 +95,6 @@ export async function updateArticle(
 }
 
 export async function deleteArticle(id: string): Promise<void> {
+  const db = requireDb()
   await deleteDoc(doc(db, ARTICLES, id))
 }

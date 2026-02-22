@@ -11,7 +11,7 @@ import {
   where,
 } from 'firebase/firestore'
 import type { UpdateData } from 'firebase/firestore'
-import { db } from '@/config/firebase'
+import { requireDb } from '@/config/firebase'
 import type { Project } from '@/types/project'
 
 const PROJECTS = 'projects'
@@ -22,6 +22,7 @@ export interface ProjectFilters {
 }
 
 export async function getProjects(filters?: ProjectFilters): Promise<Project[]> {
+  const db = requireDb()
   const constraints = []
   if (filters?.category) {
     constraints.push(where('category', '==', filters.category))
@@ -35,6 +36,7 @@ export async function getProjects(filters?: ProjectFilters): Promise<Project[]> 
 }
 
 export async function getProject(id: string): Promise<Project | null> {
+  const db = requireDb()
   const snap = await getDoc(doc(db, PROJECTS, id))
   if (!snap.exists()) return null
   return { id: snap.id, ...snap.data() } as Project
@@ -43,6 +45,7 @@ export async function getProject(id: string): Promise<Project | null> {
 export async function createProject(
   data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
+  const db = requireDb()
   const ref = await addDoc(collection(db, PROJECTS), {
     ...data,
     createdAt: serverTimestamp(),
@@ -55,6 +58,7 @@ export async function updateProject(
   id: string,
   data: Partial<Omit<Project, 'id' | 'createdAt'>>,
 ): Promise<void> {
+  const db = requireDb()
   await updateDoc(doc(db, PROJECTS, id), {
     ...data,
     updatedAt: serverTimestamp(),
@@ -62,5 +66,6 @@ export async function updateProject(
 }
 
 export async function deleteProject(id: string): Promise<void> {
+  const db = requireDb()
   await deleteDoc(doc(db, PROJECTS, id))
 }
