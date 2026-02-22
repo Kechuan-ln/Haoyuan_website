@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   MapPin,
   Phone,
@@ -56,6 +56,96 @@ const INITIAL_FORM: ContactForm = {
   company: '',
   subject: '',
   message: '',
+}
+
+const AMAP_KEY = '5c929006a41b4bd38b879764ebdbbcfd'
+// 深圳市光明区光明街道 approximate coordinates
+const COMPANY_LNG = 113.93
+const COMPANY_LAT = 22.77
+
+function AMapContainer() {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<unknown>(null)
+  const [mapError, setMapError] = useState(false)
+
+  useEffect(() => {
+    // Avoid loading the script multiple times
+    const existingScript = document.getElementById('amap-jsapi')
+
+    function initMap() {
+      const AMap = (window as unknown as Record<string, unknown>).AMap as {
+        Map: new (
+          el: HTMLElement,
+          opts: Record<string, unknown>
+        ) => Record<string, unknown>
+        Marker: new (opts: Record<string, unknown>) => unknown
+      } | undefined
+
+      if (!AMap || !mapRef.current) {
+        setMapError(true)
+        return
+      }
+
+      try {
+        const map = new AMap.Map(mapRef.current, {
+          zoom: 15,
+          center: [COMPANY_LNG, COMPANY_LAT],
+          viewMode: '2D',
+        })
+
+        new AMap.Marker({
+          position: [COMPANY_LNG, COMPANY_LAT],
+          title: COMPANY.name,
+          map,
+        })
+
+        mapInstanceRef.current = map
+      } catch {
+        setMapError(true)
+      }
+    }
+
+    if (existingScript) {
+      // Script already loaded or loading
+      if ((window as unknown as Record<string, unknown>).AMap) {
+        initMap()
+      } else {
+        existingScript.addEventListener('load', initMap)
+        existingScript.addEventListener('error', () => setMapError(true))
+      }
+    } else {
+      const script = document.createElement('script')
+      script.id = 'amap-jsapi'
+      script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}`
+      script.async = true
+      script.onload = initMap
+      script.onerror = () => setMapError(true)
+      document.head.appendChild(script)
+    }
+
+    return () => {
+      // Destroy map instance on unmount to avoid memory leaks
+      if (mapInstanceRef.current) {
+        const instance = mapInstanceRef.current as { destroy?: () => void }
+        instance.destroy?.()
+        mapInstanceRef.current = null
+      }
+    }
+  }, [])
+
+  if (mapError) {
+    return (
+      <div className="aspect-video bg-bg-gray flex flex-col items-center justify-center gap-3">
+        <div className="w-16 h-16 bg-navy/10 rounded-full flex items-center justify-center">
+          <MapPin className="w-8 h-8 text-navy/40" />
+        </div>
+        <p className="text-text-muted text-sm">地图加载失败</p>
+        <p className="text-text-muted text-xs">{COMPANY.address}</p>
+      </div>
+    )
+  }
+
+  return <div ref={mapRef} className="aspect-video w-full" />
 }
 
 export default function ContactPage() {
@@ -148,15 +238,9 @@ export default function ContactPage() {
                 ))}
               </div>
 
-              {/* Map Placeholder */}
+              {/* AMap 高德地图 */}
               <div className="bg-white rounded-xl border border-border shadow-md overflow-hidden">
-                <div className="aspect-video bg-bg-gray flex flex-col items-center justify-center gap-3">
-                  <div className="w-16 h-16 bg-navy/10 rounded-full flex items-center justify-center">
-                    <MapPin className="w-8 h-8 text-navy/40" />
-                  </div>
-                  <p className="text-text-muted text-sm">高德地图（待接入）</p>
-                  <p className="text-text-muted text-xs">{COMPANY.address}</p>
-                </div>
+                <AMapContainer />
               </div>
             </div>
 

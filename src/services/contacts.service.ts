@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   getDocs,
   doc,
   query,
@@ -9,7 +10,7 @@ import {
   where,
   orderBy,
 } from 'firebase/firestore'
-import { db } from '@/config/firebase'
+import { requireDb } from '@/config/firebase'
 import type { ContactMessage } from '@/types/contact'
 
 const CONTACTS = 'contacts'
@@ -17,6 +18,7 @@ const CONTACTS = 'contacts'
 export async function submitContact(
   data: Omit<ContactMessage, 'id' | 'isRead' | 'createdAt'>,
 ): Promise<string> {
+  const db = requireDb()
   const ref = await addDoc(collection(db, CONTACTS), {
     ...data,
     isRead: false,
@@ -28,6 +30,7 @@ export async function submitContact(
 export async function getContacts(
   isRead?: boolean,
 ): Promise<ContactMessage[]> {
+  const db = requireDb()
   const constraints = []
   if (isRead !== undefined) {
     constraints.push(where('isRead', '==', isRead))
@@ -42,7 +45,13 @@ export async function getContacts(
 }
 
 export async function markAsRead(id: string): Promise<void> {
+  const db = requireDb()
   await updateDoc(doc(db, CONTACTS, id), {
     isRead: true,
   })
+}
+
+export async function deleteContact(id: string): Promise<void> {
+  const db = requireDb()
+  await deleteDoc(doc(db, CONTACTS, id))
 }

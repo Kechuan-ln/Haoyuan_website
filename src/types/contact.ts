@@ -14,10 +14,14 @@ export interface ContactMessage {
 
 export interface SiteSettings {
   heroSlides: HeroSlide[]
+  companyName: string
   companyPhone: string
   companyEmail: string
   companyAddress: string
   companyDescription: string
+  siteTitle: string
+  siteDescription: string
+  siteKeywords: string
 }
 
 export interface HeroSlide {
