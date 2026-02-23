@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
@@ -25,7 +25,7 @@ function getErrorMessage(error: unknown): string {
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { appUser } = useAuth()
+  const { appUser, loading: authLoading, error: authError } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -34,6 +34,29 @@ export default function LoginPage() {
   const [resetSent, setResetSent] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [showResetModal, setShowResetModal] = useState(false)
+  const [pendingRedirect, setPendingRedirect] = useState(false)
+
+  // Redirect after appUser is populated by AuthContext
+  useEffect(() => {
+    if (!pendingRedirect || authLoading) return
+
+    if (appUser) {
+      setPendingRedirect(false)
+      setLoading(false)
+      if (appUser.role === 'admin') {
+        navigate(ROUTES.ADMIN)
+      } else if (appUser.role === 'vendor') {
+        navigate(ROUTES.VENDOR_DASHBOARD)
+      } else {
+        navigate(ROUTES.HOME)
+      }
+    } else if (authError) {
+      // AuthContext failed to load user doc (e.g. offline, rules error)
+      setPendingRedirect(false)
+      setLoading(false)
+      setError(authError)
+    }
+  }, [pendingRedirect, appUser, authLoading, authError, navigate])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -42,20 +65,9 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password)
-
-      // Redirect based on role (appUser will be set by AuthContext after auth state change)
-      // We use a small delay to let AuthContext fetch the user doc
-      // In practice, the navigation will happen once appUser is populated
-      if (appUser?.role === 'admin') {
-        navigate(ROUTES.ADMIN)
-      } else if (appUser?.role === 'vendor') {
-        navigate(ROUTES.VENDOR_DASHBOARD)
-      } else {
-        navigate(ROUTES.HOME)
-      }
+      setPendingRedirect(true)
     } catch (err) {
       setError(getErrorMessage(err))
-    } finally {
       setLoading(false)
     }
   }

@@ -9,18 +9,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userDocExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function isAdmin() {
-      return isAuthenticated()
+      return isAuthenticated() && userDocExists()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     function isReviewer() {
-      return isAuthenticated()
+      return isAuthenticated() && userDocExists()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'reviewer';
     }
 
     function isVendor() {
-      return isAuthenticated()
+      return isAuthenticated() && userDocExists()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'vendor';
     }
 
@@ -37,7 +41,7 @@ service cloud.firestore {
     // ─── Users ─────────────────────────────────────────────────────────
 
     match /users/{uid} {
-      allow read: if isAdmin() || isOwner(uid);
+      allow read: if isOwner(uid) || isAdmin();
       allow create: if isOwner(uid);
       allow update: if isAdmin() || (isOwner(uid)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
