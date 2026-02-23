@@ -5,6 +5,8 @@ import { serverTimestamp } from 'firebase/firestore'
 import { ROUTES } from '@/config/routes'
 import { getArticle, createArticle, updateArticle } from '@/services/articles.service'
 import { useAuth } from '@/contexts/AuthContext'
+import ImageUploader from '@/components/shared/ImageUploader'
+import RichTextEditor from '@/components/shared/RichTextEditor'
 import type { Article, ArticleCategory } from '@/types/article'
 
 interface ArticleFormData {
@@ -174,32 +176,14 @@ export default function ArticleEditorPage() {
 
         {/* 封面图片 */}
         <div className="space-y-1.5">
-          <label htmlFor="coverImageUrl" className="block text-sm font-medium text-text-primary">
+          <label className="block text-sm font-medium text-text-primary">
             封面图片
           </label>
-          <input
-            id="coverImageUrl"
-            type="text"
-            placeholder="请输入图片 URL 地址"
+          <ImageUploader
             value={form.coverImageUrl}
-            onChange={(e) => handleChange('coverImageUrl', e.target.value)}
-            className="w-full rounded-lg border border-border px-4 py-2.5 text-sm placeholder:text-text-muted focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors"
+            onChange={(url) => handleChange('coverImageUrl', url as string)}
+            storagePath="articles"
           />
-          {form.coverImageUrl && (
-            <div className="mt-2 rounded-lg border border-border overflow-hidden bg-bg-gray">
-              <img
-                src={form.coverImageUrl}
-                alt="封面预览"
-                className="max-h-48 object-cover mx-auto"
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
-            </div>
-          )}
-          <p className="text-xs text-text-muted">
-            支持输入图片 URL 地址，后续将支持文件上传功能
-          </p>
         </div>
 
         {/* 文章摘要 */}
@@ -219,20 +203,15 @@ export default function ArticleEditorPage() {
 
         {/* 文章内容 */}
         <div className="space-y-1.5">
-          <label htmlFor="content" className="block text-sm font-medium text-text-primary">
+          <label className="block text-sm font-medium text-text-primary">
             文章内容
           </label>
-          <textarea
-            id="content"
-            rows={12}
+          <RichTextEditor
+            content={form.content}
+            onChange={(html) => handleChange('content', html)}
             placeholder="请输入文章正文内容..."
-            value={form.content}
-            onChange={(e) => handleChange('content', e.target.value)}
-            className="w-full rounded-lg border border-border px-4 py-2.5 text-sm placeholder:text-text-muted focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-vertical leading-relaxed"
+            imageStoragePath="articles"
           />
-          <p className="text-xs text-text-muted">
-            当前为纯文本编辑，后续将升级为 Tiptap 富文本编辑器
-          </p>
         </div>
 
         {/* 发布状态 */}

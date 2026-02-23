@@ -1,73 +1,16 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Calendar,
   ArrowRight,
   Newspaper,
-  ChevronLeft,
-  ChevronRight,
   ImageIcon,
+  Loader2,
 } from 'lucide-react'
-import type { ArticleCategory } from '@/types/article'
-
-interface SampleArticle {
-  id: string
-  title: string
-  category: ArticleCategory
-  date: string
-  excerpt: string
-}
-
-const SAMPLE_ARTICLES: SampleArticle[] = [
-  {
-    id: '1',
-    title: '全程创优荣获AAAA级标准化工地认证',
-    category: 'company',
-    date: '2025-01-15',
-    excerpt:
-      '近日，我公司成功通过AAAA级标准化工地评审，标志着公司在工程管理标准化方面又迈上了新的台阶。',
-  },
-  {
-    id: '2',
-    title: '深圳市建设工程招标投标新规解读',
-    category: 'industry',
-    date: '2025-01-10',
-    excerpt:
-      '深圳市住建局近日发布了建设工程招标投标管理的最新规定，对招标流程、评标标准等方面进行了重要调整。',
-  },
-  {
-    id: '3',
-    title: '福永人民医院改造项目顺利竣工验收',
-    category: 'news',
-    date: '2024-12-20',
-    excerpt:
-      '由我公司承担监理服务的福永人民医院消化内镜中心改造工程顺利通过竣工验收，获得业主高度评价。',
-  },
-  {
-    id: '4',
-    title: '公司通过ISO三体系年度监督审核',
-    category: 'company',
-    date: '2024-12-05',
-    excerpt:
-      '我公司顺利通过ISO 9001、ISO 14001、ISO 45001三大管理体系年度监督审核，持续保持认证有效性。',
-  },
-  {
-    id: '5',
-    title: '关于开展2025年度供应商入库申请的通知',
-    category: 'announcement',
-    date: '2024-11-28',
-    excerpt:
-      '为进一步规范公司供应商管理，现开展2025年度合格供应商入库申请工作，欢迎符合条件的企业报名。',
-  },
-  {
-    id: '6',
-    title: '光伏发电项目绿色施工技术应用',
-    category: 'industry',
-    date: '2024-11-15',
-    excerpt:
-      '随着双碳目标的推进，光伏发电项目在建设领域的应用日益广泛。本文探讨了光伏项目施工中的绿色技术应用。',
-  },
-]
+import type { DocumentSnapshot } from 'firebase/firestore'
+import type { Article, ArticleCategory } from '@/types/article'
+import { getArticles } from '@/services/articles.service'
+import { formatDate } from '@/utils/format'
 
 const CATEGORY_TABS: { value: string; label: string }[] = [
   { value: 'all', label: '全部' },
@@ -84,18 +27,59 @@ const CATEGORY_BADGE_MAP: Record<ArticleCategory, { label: string; className: st
   company: { label: '企业动态', className: 'bg-green-50 text-green-700' },
 }
 
-function formatDisplayDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-')
-  return `${year}年${month}月${day}日`
-}
+const PAGE_SIZE = 9
 
 export default function NewsPage() {
   const [activeTab, setActiveTab] = useState('all')
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loading, setLoading] = useState(true)
+  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
 
-  const filteredArticles = useMemo(() => {
-    if (activeTab === 'all') return SAMPLE_ARTICLES
-    return SAMPLE_ARTICLES.filter((a) => a.category === activeTab)
+  useEffect(() => {
+    const fetchArticles = async () => {
+      setLoading(true)
+      setArticles([])
+      setLastDoc(null)
+      setHasMore(true)
+      try {
+        const result = await getArticles({
+          isPublished: true,
+          category: activeTab === 'all' ? undefined : (activeTab as ArticleCategory),
+          pageSize: PAGE_SIZE,
+        })
+        setArticles(result.articles)
+        setLastDoc(result.lastDoc)
+        setHasMore(result.articles.length >= PAGE_SIZE)
+      } catch (error) {
+        console.error('Failed to load articles:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchArticles()
   }, [activeTab])
+
+  const loadMore = async () => {
+    if (!lastDoc || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const result = await getArticles({
+        isPublished: true,
+        category: activeTab === 'all' ? undefined : (activeTab as ArticleCategory),
+        pageSize: PAGE_SIZE,
+        lastDoc,
+      })
+      setArticles(prev => [...prev, ...result.articles])
+      setLastDoc(result.lastDoc)
+      setHasMore(result.articles.length >= PAGE_SIZE)
+    } catch (error) {
+      console.error('Failed to load more:', error)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   return (
     <div>
@@ -138,14 +122,18 @@ export default function NewsPage() {
       {/* Article List */}
       <section className="py-12 sm:py-16 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          {filteredArticles.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-navy" />
+            </div>
+          ) : articles.length === 0 ? (
             <div className="text-center py-20">
               <Newspaper className="w-12 h-12 text-text-muted mx-auto mb-4" />
-              <p className="text-text-secondary">暂无相关新闻</p>
+              <p className="text-text-secondary">暂无文章</p>
             </div>
           ) : (
             <div className="space-y-5">
-              {filteredArticles.map((article) => {
+              {articles.map((article) => {
                 const badge = CATEGORY_BADGE_MAP[article.category]
                 return (
                   <Link
@@ -154,8 +142,18 @@ export default function NewsPage() {
                     className="group flex bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-border"
                   >
                     {/* Thumbnail */}
-                    <div className="hidden sm:flex w-48 lg:w-56 shrink-0 bg-gradient-to-br from-navy/5 to-navy/10 items-center justify-center">
-                      <ImageIcon className="w-10 h-10 text-navy/20" />
+                    <div className="hidden sm:flex w-48 lg:w-56 shrink-0 items-center justify-center overflow-hidden">
+                      {article.coverImageUrl ? (
+                        <img
+                          src={article.coverImageUrl}
+                          alt={article.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center">
+                          <ImageIcon className="w-10 h-10 text-navy/20" />
+                        </div>
+                      )}
                     </div>
 
                     {/* Content */}
@@ -169,7 +167,7 @@ export default function NewsPage() {
                           </span>
                           <span className="flex items-center gap-1 text-xs text-text-muted">
                             <Calendar className="w-3.5 h-3.5" />
-                            {formatDisplayDate(article.date)}
+                            {formatDate(article.publishedAt ?? article.createdAt)}
                           </span>
                         </div>
                         <h3 className="text-lg font-bold text-text-primary mb-2 group-hover:text-navy transition-colors line-clamp-1">
@@ -192,28 +190,18 @@ export default function NewsPage() {
             </div>
           )}
 
-          {/* Pagination */}
-          <div className="mt-10 flex items-center justify-between">
-            <p className="text-sm text-text-muted">
-              显示 1-{filteredArticles.length} 共 {filteredArticles.length} 条
-            </p>
-            <div className="flex items-center gap-2">
+          {/* Load More */}
+          {hasMore && !loading && articles.length > 0 && (
+            <div className="text-center mt-8">
               <button
-                disabled
-                className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-muted cursor-not-allowed"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="px-6 py-2 bg-navy text-white rounded-lg hover:bg-navy/90 disabled:opacity-50 transition-colors"
               >
-                <ChevronLeft className="w-4 h-4" />
-                上一页
-              </button>
-              <button
-                disabled
-                className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-muted cursor-not-allowed"
-              >
-                下一页
-                <ChevronRight className="w-4 h-4" />
+                {loadingMore ? '加载中...' : '加载更多'}
               </button>
             </div>
-          </div>
+          )}
         </div>
       </section>
     </div>

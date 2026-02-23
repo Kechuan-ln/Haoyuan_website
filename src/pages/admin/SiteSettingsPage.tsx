@@ -15,6 +15,7 @@ import {
 import type { HeroSlide } from '@/types/contact'
 import { COMPANY } from '@/config/constants'
 import { getSiteSettings, updateSiteSettings } from '@/services/site-settings.service'
+import ImageUploader from '@/components/shared/ImageUploader'
 
 /* ---------- Types ---------- */
 
@@ -340,14 +341,12 @@ export default function SiteSettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1.5">
-                    图片 URL
+                    轮播图片
                   </label>
-                  <input
-                    type="text"
+                  <ImageUploader
                     value={slide.imageUrl}
-                    onChange={(e) => updateSlide(index, 'imageUrl', e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full rounded-lg border border-border px-4 py-2.5 text-sm placeholder:text-text-muted focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors"
+                    onChange={(url) => updateSlide(index, 'imageUrl', url as string)}
+                    storagePath="public/hero"
                   />
                 </div>
                 <div>
