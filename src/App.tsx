@@ -116,7 +116,8 @@ function App() {
           {/* Reviewer routes under AdminLayout, protected for admin or reviewer */}
           <Route element={<ProtectedRoute allowedRoles={['admin', 'reviewer']} />}>
             <Route element={<AdminLayout />}>
-              {/* Reviewer can access evaluation pages */}
+              <Route path="admin/bids/:id/evaluate" element={<BidEvaluationPage />} />
+              <Route path="admin/bids/:id/report" element={<EvaluationReportPage />} />
             </Route>
           </Route>
 

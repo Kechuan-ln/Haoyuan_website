@@ -1,66 +1,21 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Search,
   Calendar,
   ArrowRight,
   Gavel,
-  Tag,
   DollarSign,
   Hash,
   UserPlus,
+  Tag,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
-import type { BidStatus } from '@/types/bid'
+import type { Bid } from '@/types/bid'
 import { ROUTES } from '@/config/routes'
-
-interface SampleBid {
-  id: string
-  title: string
-  bidNumber: string
-  status: BidStatus
-  category: string
-  budget: string
-  deadline: string
-}
-
-const SAMPLE_BIDS: SampleBid[] = [
-  {
-    id: '1',
-    title: '福永人民医院康复科室改造工程监理',
-    bidNumber: 'QCCY-2025-001',
-    status: 'bidding',
-    category: '医疗',
-    budget: '50万元',
-    deadline: '2025-03-15',
-  },
-  {
-    id: '2',
-    title: '光明区某学校实验室设备采购',
-    bidNumber: 'QCCY-2025-002',
-    status: 'bidding',
-    category: '教育',
-    budget: '120万元',
-    deadline: '2025-03-20',
-  },
-  {
-    id: '3',
-    title: '某产业园区装修工程造价咨询',
-    bidNumber: 'QCCY-2024-018',
-    status: 'closed',
-    category: '产业园',
-    budget: '30万元',
-    deadline: '2025-01-15',
-  },
-  {
-    id: '4',
-    title: '南山区社区服务中心改造项目管理',
-    bidNumber: 'QCCY-2024-015',
-    status: 'awarded',
-    category: '市政',
-    budget: '80万元',
-    deadline: '2024-12-01',
-  },
-]
+import { getBids } from '@/services/bids.service'
+import { formatDate, formatCurrency } from '@/utils/format'
 
 const STATUS_TABS: { value: string; label: string }[] = [
   { value: 'all', label: '全部' },
@@ -70,6 +25,7 @@ const STATUS_TABS: { value: string; label: string }[] = [
 ]
 
 const STATUS_BADGE_MAP: Record<string, { label: string; className: string }> = {
+  published: { label: '已发布', className: 'bg-blue-50 text-blue-700' },
   bidding: { label: '投标中', className: 'bg-green-50 text-green-700' },
   closed: { label: '已截止', className: 'bg-yellow-50 text-yellow-700' },
   awarded: { label: '已定标', className: 'bg-navy/10 text-navy' },
@@ -82,31 +38,51 @@ const CATEGORY_COLOR_MAP: Record<string, string> = {
   '市政': 'bg-orange-50 text-orange-700',
 }
 
-function formatDisplayDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-')
-  return `${year}年${month}月${day}日`
-}
-
 export default function BidHallPage() {
   const [activeStatus, setActiveStatus] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [bids, setBids] = useState<Bid[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadBids = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await getBids()
+      // Only show public-facing statuses
+      const publicBids = data.filter((b) =>
+        ['published', 'bidding', 'closed', 'awarded'].includes(b.status),
+      )
+      setBids(publicBids)
+    } catch (err) {
+      console.error('加载招标数据失败:', err)
+      setError('加载招标数据失败，请稍后重试')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadBids()
+  }, [loadBids])
 
   const filteredBids = useMemo(() => {
-    let result = SAMPLE_BIDS
+    let result = bids
     if (activeStatus !== 'all') {
       result = result.filter((b) => b.status === activeStatus)
     }
     if (searchQuery.trim()) {
-      const query = searchQuery.trim().toLowerCase()
+      const q = searchQuery.trim().toLowerCase()
       result = result.filter(
         (b) =>
-          b.title.toLowerCase().includes(query) ||
-          b.bidNumber.toLowerCase().includes(query) ||
-          b.category.includes(query),
+          b.title.toLowerCase().includes(q) ||
+          b.bidNumber.toLowerCase().includes(q) ||
+          b.category.includes(q),
       )
     }
     return result
-  }, [activeStatus, searchQuery])
+  }, [bids, activeStatus, searchQuery])
 
   return (
     <div>
@@ -164,7 +140,23 @@ export default function BidHallPage() {
       {/* Bid List */}
       <section className="py-12 sm:py-16 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          {filteredBids.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-20">
+              <Loader2 className="w-10 h-10 text-navy mx-auto mb-4 animate-spin" />
+              <p className="text-text-secondary">加载招标数据中...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-20">
+              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+              <p className="text-red-600 mb-4">{error}</p>
+              <button
+                onClick={loadBids}
+                className="inline-flex items-center gap-2 rounded-lg border-2 border-navy px-5 py-2.5 text-sm font-semibold text-navy transition-all hover:bg-navy hover:text-white"
+              >
+                重新加载
+              </button>
+            </div>
+          ) : filteredBids.length === 0 ? (
             <div className="text-center py-20">
               <Gavel className="w-12 h-12 text-text-muted mx-auto mb-4" />
               <p className="text-text-secondary">暂无符合条件的招标项目</p>
@@ -211,11 +203,11 @@ export default function BidHallPage() {
                           </span>
                           <span className="flex items-center gap-1.5 text-sm text-text-secondary">
                             <DollarSign className="w-3.5 h-3.5 text-text-muted" />
-                            预算：{bid.budget}
+                            预算：{formatCurrency(bid.budget)}
                           </span>
                           <span className="flex items-center gap-1.5 text-sm text-text-secondary">
                             <Calendar className="w-3.5 h-3.5 text-text-muted" />
-                            截止：{formatDisplayDate(bid.deadline)}
+                            截止：{formatDate(bid.biddingDeadline)}
                           </span>
                         </div>
                       </div>

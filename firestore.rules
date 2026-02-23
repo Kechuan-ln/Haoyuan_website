@@ -64,7 +64,7 @@ service cloud.firestore {
 
     match /bids/{bidId} {
       allow read: if isAdmin() || isReviewer()
-        || (isVendor() && resource.data.status in ['published', 'bidding', 'closed', 'awarded']);
+        || resource.data.status in ['published', 'bidding', 'closed', 'awarded'];
       allow create, update, delete: if isAdmin();
     }
 

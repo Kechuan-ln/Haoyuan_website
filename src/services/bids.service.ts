@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -11,7 +12,7 @@ import {
 } from 'firebase/firestore'
 import type { UpdateData } from 'firebase/firestore'
 import { requireDb } from '@/config/firebase'
-import type { Bid, BidStatus, BidSubmission } from '@/types/bid'
+import type { Bid, BidStatus, BidSubmission, SubmissionStatus } from '@/types/bid'
 
 const BIDS = 'bids'
 const SUBMISSIONS = 'bidSubmissions'
@@ -102,4 +103,36 @@ export async function submitBid(
     createdAt: serverTimestamp(),
   })
   return ref.id
+}
+
+export async function deleteBid(id: string): Promise<void> {
+  const db = requireDb()
+  await deleteDoc(doc(db, BIDS, id))
+}
+
+export async function getSubmission(
+  id: string,
+): Promise<BidSubmission | null> {
+  const db = requireDb()
+  const snap = await getDoc(doc(db, SUBMISSIONS, id))
+  if (!snap.exists()) return null
+  return { id: snap.id, ...snap.data() } as BidSubmission
+}
+
+export async function updateSubmission(
+  id: string,
+  data: Partial<Omit<BidSubmission, 'id' | 'createdAt'>>,
+): Promise<void> {
+  const db = requireDb()
+  await updateDoc(doc(db, SUBMISSIONS, id), {
+    ...data,
+  } as UpdateData<BidSubmission>)
+}
+
+export async function updateSubmissionStatus(
+  id: string,
+  status: SubmissionStatus,
+): Promise<void> {
+  const db = requireDb()
+  await updateDoc(doc(db, SUBMISSIONS, id), { status })
 }

@@ -48,7 +48,15 @@ service firebase.storage {
       allow write: if isAuthenticated() && request.auth.uid == uid;
     }
 
-    // ─── Bid Documents ─────────────────────────────────────────────────
+    // ─── Bid Attachments (admin-uploaded bid documents) ─────────────────
+    // Public read for bid attachments (招标文件); only admins can upload
+
+    match /bids/{bidId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── Bid Submission Documents (vendor-uploaded) ──────────────────────
     // Uploading vendor and admins/reviewers can read; vendor writes to own path
 
     match /bid-documents/{bidId}/{vendorId}/{allPaths=**} {
