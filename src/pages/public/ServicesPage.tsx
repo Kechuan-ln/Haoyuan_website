@@ -11,6 +11,7 @@ import { getIcon } from '@/config/icon-map'
 import { ROUTES } from '@/config/routes'
 import { CardSkeleton } from '@/components/shared/Skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { SectionHeading } from '@/components/shared/SectionHeading'
 import type { Service } from '@/types/service'
 
 export default function ServicesPage() {
@@ -60,6 +61,7 @@ export default function ServicesPage() {
       {/* Services Grid */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
+          <SectionHeading title="核心业务" subtitle="五大专业服务领域，为工程建设全过程提供技术支持" />
           {loading ? (
             <div className="flex flex-col gap-8">
               {[...Array(3)].map((_, i) => <CardSkeleton key={i} />)}

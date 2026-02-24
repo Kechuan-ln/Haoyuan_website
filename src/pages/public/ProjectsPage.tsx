@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { CardSkeleton } from '@/components/shared/Skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { SectionHeading } from '@/components/shared/SectionHeading'
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
@@ -109,6 +110,7 @@ export default function ProjectsPage() {
       {/* Projects Grid */}
       <section className="py-16 sm:py-20 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
+          <SectionHeading title="项目案例" subtitle="丰富的工程业绩，覆盖医疗、教育、住房、产业园等多个领域" />
           {/* Results count */}
           {!loading && (
             <p className="text-sm text-text-muted mb-8">
