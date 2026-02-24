@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Outlet, Link } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -41,6 +41,8 @@ export default function AdminLayout() {
   const { appUser, isManager } = useAuth()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  const handleCloseDrawer = useCallback(() => setDrawerOpen(false), [])
+
   const visibleItems = isManager
     ? ADMIN_NAV_ITEMS
     : ADMIN_NAV_ITEMS.filter((item) => !item.managerOnly)
@@ -78,7 +80,7 @@ export default function AdminLayout() {
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <Sidebar items={visibleItems} accentColor="gold" />
+        <Sidebar items={visibleItems} accentColor="gold" onClose={handleCloseDrawer} />
       </div>
 
       {/* Main content area */}

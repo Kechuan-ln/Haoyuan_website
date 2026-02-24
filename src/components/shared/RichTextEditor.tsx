@@ -107,7 +107,8 @@ export default function RichTextEditor({
   return (
     <div>
       {/* Toolbar */}
-      <div className="bg-gray-100 rounded-t-lg border border-gray-200 p-2 flex flex-wrap gap-1 items-center">
+      <div className="bg-gray-100 rounded-t-lg border border-gray-200 overflow-x-auto">
+      <div className="flex gap-1 p-2 min-w-max items-center">
         {/* Bold, Italic */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -195,6 +196,7 @@ export default function RichTextEditor({
           icon={Minus}
           title="分隔线"
         />
+      </div>
       </div>
 
       {/* Image popover */}
