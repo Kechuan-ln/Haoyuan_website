@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore'
+import type { ContentStatus } from './content-status'
 
 export interface Service {
   id: string
@@ -13,4 +14,10 @@ export interface Service {
   sortOrder: number
   createdAt: Timestamp
   updatedAt: Timestamp
+  status?: ContentStatus
+  submittedBy?: string
+  submittedAt?: Timestamp
+  reviewedBy?: string
+  reviewedAt?: Timestamp
+  rejectionReason?: string
 }

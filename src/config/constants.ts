@@ -1,3 +1,19 @@
+import type { ContentStatus, ContentType } from '@/types/content-status'
+
+export const CONTENT_STATUSES: readonly { value: ContentStatus; label: string; color: string }[] = [
+  { value: 'draft', label: '草稿', color: 'gray' },
+  { value: 'pending_review', label: '待审核', color: 'yellow' },
+  { value: 'published', label: '已发布', color: 'green' },
+  { value: 'rejected', label: '已退回', color: 'red' },
+] as const
+
+export const CONTENT_TYPES: readonly { value: ContentType; label: string; collection: string }[] = [
+  { value: 'article', label: '文章', collection: 'articles' },
+  { value: 'project', label: '业绩', collection: 'projects' },
+  { value: 'service', label: '服务', collection: 'services' },
+  { value: 'qualification', label: '资质', collection: 'qualifications' },
+] as const
+
 export const COMPANY = {
   name: '广东全程创优建设技术有限公司',
   shortName: '全程创优',

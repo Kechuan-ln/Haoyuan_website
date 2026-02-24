@@ -52,6 +52,7 @@ const HomeContentPage = lazy(() => import('@/pages/admin/HomeContentPage'))
 const UserManagePage = lazy(() => import('@/pages/admin/UserManagePage'))
 const SiteSettingsPage = lazy(() => import('@/pages/admin/SiteSettingsPage'))
 const QualificationsManagePage = lazy(() => import('@/pages/admin/QualificationsManagePage'))
+const ReviewQueuePage = lazy(() => import('@/pages/admin/ReviewQueuePage'))
 
 // ---------- Special pages ----------
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
@@ -121,6 +122,7 @@ function App() {
               <Route path="admin/contacts" element={<ContactManagePage />} />
               <Route path="admin/users" element={<ManagerGuard><UserManagePage /></ManagerGuard>} />
               <Route path="admin/settings" element={<ManagerGuard><SiteSettingsPage /></ManagerGuard>} />
+              <Route path="admin/review" element={<ManagerGuard><ReviewQueuePage /></ManagerGuard>} />
             </Route>
           </Route>
 

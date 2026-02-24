@@ -18,10 +18,15 @@ Updated: 2026-02-24T14:00:28.145Z
   - contacts/projects/articles 并行查询，formatRelativeTime，empty state
   - DEFAULT_QUALIFICATIONS 提取到 src/config/qualification-defaults.ts
   - QualificationsManagePage 空状态加「初始化默认资质」seed 按钮
-- Now: [→] 三条并行工作线：
-  - [ ] public-pages worktree: 公开页面 UI 优化（进行中）
-  - [ ] approval-workflow worktree: 内容审批流 (PRD: APPROVAL_WORKFLOW_PRD.md)
-  - [ ] 等以上合并后统一 deploy
+- [x] public-pages worktree: 公开页面 UI 优化（已合并 dd84a5c，已部署）
+  - AnimatedSection / HeroSection / CTASection 新共享组件
+  - 所有公开页滚动动画 + 设计令牌统一
+- [x] Firestore 复合索引修复 (fe6b827，已部署)
+- Now: [→]
+  - [ ] approval-workflow worktree: 内容审批流（进行中，PRD: APPROVAL_WORKFLOW_PRD.md）
+- Next（approval-workflow 合并后新对话处理）：
+  - [ ] 首页轮播图：HomePage.tsx 静态 Hero 改为从 Firestore heroSlides 动态读取并轮播
+  - [ ] 关于页「企业形象展示」：替换占位符为公司实体照片（静态或可上传）
 
 ## Key Decisions
 - Firebase 条件初始化：无 .env 时跳过不崩溃
@@ -34,14 +39,16 @@ Updated: 2026-02-24T14:00:28.145Z
 - QualificationsPage: Firestore 无数据时 fallback 到硬编码 DEFAULT_QUALIFICATIONS
 - ContactPage: useEffect 异步拉 SiteSettings，state 初始值为 COMPANY 常量（无闪烁）
 - SSH: github.com port 22 被封 → ~/.ssh/config 改为 ssh.github.com:443
+- 首页 Hero: UI 优化后改为静态 HeroSection 组件，heroSlides 数据存在但未被消费
+- heroSlides 下一步：HomePage 改为动态轮播（从 Firestore settings/site 读取）
+- 关于页「企业形象展示」：目前是占位符，下一步放公司实体照片
 
 ## Working Set
-- Branch: `main` (HEAD: merge of bd8ba45) | GitHub: Kechuan-ln/Haoyuan_website
+- Branch: `main` (HEAD: dd84a5c) | GitHub: Kechuan-ln/Haoyuan_website
 - Firebase: haoyuan-web | URL: https://haoyuan-web.web.app
 - Build: `npm run build` | Dev: `npm run dev`
-- Deploy: `firebase deploy --only hosting,firestore:rules`
+- Deploy: `firebase deploy --only hosting,firestore:rules,firestore:indexes`
 - Worktrees:
-  - `.claude/worktrees/public-pages` — UI 优化（进行中）
   - `.claude/worktrees/approval-workflow` — 审批流（进行中）
   - `.claude/worktrees/responsive-admin/public` — 旧的待清理
 

@@ -16,12 +16,14 @@ import {
 import type { DocumentSnapshot, UpdateData } from 'firebase/firestore'
 import { requireDb } from '@/config/firebase'
 import type { Article, ArticleCategory } from '@/types/article'
+import type { ContentStatus } from '@/types/content-status'
 
 const ARTICLES = 'articles'
 
 export interface ArticleFilters {
   category?: ArticleCategory
   isPublished?: boolean
+  status?: ContentStatus
   pageSize?: number
   lastDoc?: DocumentSnapshot
 }
@@ -42,6 +44,9 @@ export async function getArticles(
   }
   if (filters?.isPublished !== undefined) {
     constraints.push(where('isPublished', '==', filters.isPublished))
+  }
+  if (filters?.status) {
+    constraints.push(where('status', '==', filters.status))
   }
 
   constraints.push(orderBy('publishedAt', 'desc'))
@@ -77,6 +82,7 @@ export async function createArticle(
   const db = requireDb()
   const ref = await addDoc(collection(db, ARTICLES), {
     ...data,
+    status: 'draft' as ContentStatus,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })

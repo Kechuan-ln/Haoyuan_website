@@ -12,16 +12,21 @@ import {
 } from 'firebase/firestore'
 import { requireDb } from '@/config/firebase'
 import type { Qualification } from '@/types/qualification'
+import type { ContentStatus } from '@/types/content-status'
 
 const QUALIFICATIONS = 'qualifications'
 
 export async function getQualifications(opts?: {
   isPublished?: boolean
+  status?: ContentStatus
 }): Promise<Qualification[]> {
   const db = requireDb()
   const constraints = []
   if (opts?.isPublished !== undefined) {
     constraints.push(where('isPublished', '==', opts.isPublished))
+  }
+  if (opts?.status) {
+    constraints.push(where('status', '==', opts.status))
   }
   constraints.push(orderBy('sortOrder', 'asc'))
   const q = query(collection(db, QUALIFICATIONS), ...constraints)
@@ -35,6 +40,7 @@ export async function createQualification(
   const db = requireDb()
   const ref = await addDoc(collection(db, QUALIFICATIONS), {
     ...data,
+    status: 'draft' as ContentStatus,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
