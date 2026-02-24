@@ -10,15 +10,18 @@ import { ROUTES } from '@/config/routes'
 import { getProjects } from '@/services/projects.service'
 import { getServices } from '@/services/services.service'
 import { getHomeContent } from '@/services/home-content.service'
+import { getSiteSettings } from '@/services/site-settings.service'
 import { getIcon } from '@/config/icon-map'
 import { CATEGORY_LABELS } from '@/data/projects'
 import { SectionHeading } from '@/components/shared/SectionHeading'
 import AnimatedSection from '@/components/shared/AnimatedSection'
 import CTASection from '@/components/shared/CTASection'
 import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
+import { HeroCarousel } from '@/components/shared/HeroCarousel'
 import type { Project } from '@/types/project'
 import type { Service } from '@/types/service'
 import type { HomeContent } from '@/types/home'
+import type { HeroSlide } from '@/types/contact'
 
 /* ---------- Default values (used when Firestore doc is empty) ---------- */
 
@@ -62,6 +65,7 @@ export default function HomePage() {
   const [homeServices, setHomeServices] = useState<Service[]>([])
   const [servicesLoading, setServicesLoading] = useState(true)
   const [homeContent, setHomeContent] = useState<HomeContent | null>(null)
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([])
 
   useEffect(() => {
     async function fetchFeatured() {
@@ -103,6 +107,20 @@ export default function HomePage() {
     fetchHomeContent()
   }, [])
 
+  useEffect(() => {
+    async function fetchHeroSlides() {
+      try {
+        const settings = await getSiteSettings()
+        if (settings?.heroSlides?.length) {
+          setHeroSlides(settings.heroSlides)
+        }
+      } catch (err) {
+        console.error('Failed to fetch hero slides:', err)
+      }
+    }
+    fetchHeroSlides()
+  }, [])
+
   const brandValues = homeContent?.brandValues?.length
     ? homeContent.brandValues
     : DEFAULT_BRAND_VALUES
@@ -115,63 +133,8 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Hero Section — custom building silhouette (not replaced by HeroSection) */}
-      <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-24 sm:py-32 px-4 overflow-hidden">
-        {/* Decorative geometric pattern */}
-        <div className="absolute inset-0 opacity-[0.06]">
-          <div className="absolute top-10 left-10 w-40 h-40 border-2 border-white rotate-45" />
-          <div className="absolute top-32 right-20 w-24 h-24 border-2 border-white rotate-12" />
-          <div className="absolute bottom-20 left-1/4 w-32 h-32 border-2 border-white -rotate-12" />
-          <div className="absolute bottom-10 right-1/3 w-20 h-20 border-2 border-white rotate-45" />
-          <div className="absolute top-1/2 right-10 w-48 h-48 border-2 border-white rotate-[30deg]" />
-        </div>
-        {/* Building silhouette */}
-        <div className="absolute bottom-0 left-0 right-0 opacity-[0.04]">
-          <div className="flex items-end justify-center gap-1 h-40">
-            <div className="w-12 bg-white h-20" />
-            <div className="w-8 bg-white h-32" />
-            <div className="w-16 bg-white h-28" />
-            <div className="w-10 bg-white h-36" />
-            <div className="w-14 bg-white h-24" />
-            <div className="w-8 bg-white h-40" />
-            <div className="w-12 bg-white h-30" />
-            <div className="w-10 bg-white h-22" />
-            <div className="w-16 bg-white h-34" />
-            <div className="w-8 bg-white h-26" />
-          </div>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto text-center animate-[fadeIn_0.8s_ease-out]">
-          <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 mb-8">
-            <Building2 className="w-4 h-4 text-gold" />
-            <span className="text-sm text-white/90">专业工程建设全过程技术服务</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
-            {COMPANY.name}
-          </h1>
-          <p className="text-xl sm:text-2xl text-gold font-medium mb-4">
-            {COMPANY.slogan}
-          </p>
-          <p className="text-base sm:text-lg text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed">
-            致力于为客户提供专业的工程建设全过程技术服务，涵盖工程造价、招标代理、工程监理、项目管理及工程咨询五大核心业务领域
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link
-              to={ROUTES.ABOUT}
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-white/40 px-8 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/70"
-            >
-              了解我们
-            </Link>
-            <Link
-              to={ROUTES.CONTACT}
-              className="inline-flex items-center gap-2 rounded-lg bg-gold px-8 py-3.5 text-sm font-semibold text-navy transition-all hover:bg-gold-light hover:shadow-lg hover:shadow-gold/20"
-            >
-              联系咨询
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Hero Section */}
+      <HeroCarousel slides={heroSlides} />
 
       {/* Brand Values Strip */}
       <section className="bg-gradient-to-r from-gold-dark via-gold to-gold-dark py-6 px-4">
