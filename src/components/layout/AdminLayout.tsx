@@ -78,7 +78,7 @@ export default function AdminLayout() {
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <Sidebar items={visibleItems} accentColor="gold" />
+        <Sidebar items={visibleItems} accentColor="gold" onClose={() => setDrawerOpen(false)} />
       </div>
 
       {/* Main content area */}

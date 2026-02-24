@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -15,14 +15,21 @@ interface SidebarProps {
   items: SidebarItem[]
   collapsed?: boolean
   accentColor?: 'gold' | 'teal'
+  onClose?: () => void
 }
 
 export default function Sidebar({
   items,
   collapsed: initialCollapsed = false,
   accentColor = 'gold',
+  onClose,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(initialCollapsed)
+  const location = useLocation()
+
+  useEffect(() => {
+    onClose?.()
+  }, [location.pathname])
 
   const activeClasses =
     accentColor === 'teal'
@@ -42,10 +49,20 @@ export default function Sidebar({
       )}
     >
       {/* Collapse toggle */}
-      <div className="flex items-center justify-end p-3 border-b border-white/10">
+      <div className="flex items-center justify-between p-3 border-b border-white/10">
+        {/* Mobile close button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1.5 rounded-md hover:bg-white/10 transition-colors"
+            aria-label="关闭侧边栏"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
+          className="hidden lg:block p-1.5 rounded-md hover:bg-white/10 transition-colors ml-auto"
           aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
         >
           {collapsed ? (
