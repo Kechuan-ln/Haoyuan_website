@@ -1,8 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  BadgeCheck,
   Calculator,
+  FileCheck,
   FileText,
   Shield,
+  Star,
   LayoutDashboard,
   MessageSquare,
   Building2,
@@ -30,9 +33,12 @@ import {
 } from 'lucide-react'
 
 export const ICON_MAP: Record<string, LucideIcon> = {
+  BadgeCheck,
   Calculator,
+  FileCheck,
   FileText,
   Shield,
+  Star,
   LayoutDashboard,
   MessageSquare,
   Building2,

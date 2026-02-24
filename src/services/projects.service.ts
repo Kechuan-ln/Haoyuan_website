@@ -5,6 +5,8 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
+  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -31,6 +33,17 @@ export async function getProjects(filters?: ProjectFilters): Promise<Project[]> 
     constraints.push(where('isPublished', '==', filters.isPublished))
   }
   const q = query(collection(db, PROJECTS), ...constraints)
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Project)
+}
+
+export async function getLatestProjects(count = 3): Promise<Project[]> {
+  const db = requireDb()
+  const q = query(
+    collection(db, PROJECTS),
+    orderBy('createdAt', 'desc'),
+    limit(count),
+  )
   const snap = await getDocs(q)
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Project)
 }

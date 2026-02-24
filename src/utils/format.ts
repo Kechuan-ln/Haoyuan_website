@@ -8,6 +8,21 @@ export function formatDate(timestamp: Timestamp): string {
   return `${year}年${month}月${day}日`
 }
 
+export function formatRelativeTime(timestamp: Timestamp): string {
+  const now = Date.now()
+  const then = timestamp.toDate().getTime()
+  const diffMs = now - then
+  const diffMin = Math.floor(diffMs / 60000)
+  const diffHour = Math.floor(diffMs / 3600000)
+  const diffDay = Math.floor(diffMs / 86400000)
+  if (diffMin < 1) return '刚刚'
+  if (diffMin < 60) return `${diffMin}分钟前`
+  if (diffHour < 24) return `${diffHour}小时前`
+  if (diffDay < 30) return `${diffDay}天前`
+  if (diffDay < 365) return `${Math.floor(diffDay / 30)}个月前`
+  return `${Math.floor(diffDay / 365)}年前`
+}
+
 export function formatCurrency(amount: number): string {
   return `¥${amount.toLocaleString('zh-CN', {
     minimumFractionDigits: 2,

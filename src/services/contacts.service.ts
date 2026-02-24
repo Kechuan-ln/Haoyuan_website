@@ -4,6 +4,7 @@ import {
   deleteDoc,
   getDocs,
   doc,
+  limit,
   query,
   serverTimestamp,
   updateDoc,
@@ -42,6 +43,17 @@ export async function getContacts(
   return snap.docs.map(
     (d) => ({ id: d.id, ...d.data() }) as ContactMessage,
   )
+}
+
+export async function getLatestContacts(count = 3): Promise<ContactMessage[]> {
+  const db = requireDb()
+  const q = query(
+    collection(db, CONTACTS),
+    orderBy('createdAt', 'desc'),
+    limit(count),
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as ContactMessage)
 }
 
 export async function markAsRead(id: string): Promise<void> {
