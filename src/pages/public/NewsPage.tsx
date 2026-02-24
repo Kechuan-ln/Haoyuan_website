@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom'
 import {
   Calendar,
   ArrowRight,
-  Newspaper,
   ImageIcon,
-  Loader2,
 } from 'lucide-react'
+import { CardSkeleton } from '@/components/shared/Skeleton'
+import { EmptyState } from '@/components/shared/EmptyState'
 import type { DocumentSnapshot } from 'firebase/firestore'
 import type { Article, ArticleCategory } from '@/types/article'
 import { getArticles } from '@/services/articles.service'
@@ -123,14 +123,11 @@ export default function NewsPage() {
       <section className="py-12 sm:py-16 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-navy" />
+            <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-5">
+              {[...Array(4)].map((_, i) => <CardSkeleton key={i} />)}
             </div>
           ) : articles.length === 0 ? (
-            <div className="text-center py-20">
-              <Newspaper className="w-12 h-12 text-text-muted mx-auto mb-4" />
-              <p className="text-text-secondary">暂无文章</p>
-            </div>
+            <EmptyState title="暂无新闻资讯" description="敬请期待后续更新" icon="📰" />
           ) : (
             <div className="space-y-5">
               {articles.map((article) => {

@@ -5,11 +5,12 @@ import {
   Building2,
   CheckCircle,
   Phone,
-  Loader2,
 } from 'lucide-react'
 import { getServices } from '@/services/services.service'
 import { getIcon } from '@/config/icon-map'
 import { ROUTES } from '@/config/routes'
+import { CardSkeleton } from '@/components/shared/Skeleton'
+import { EmptyState } from '@/components/shared/EmptyState'
 import type { Service } from '@/types/service'
 
 export default function ServicesPage() {
@@ -60,9 +61,8 @@ export default function ServicesPage() {
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 text-navy animate-spin" />
-              <span className="ml-3 text-text-secondary">加载服务数据...</span>
+            <div className="flex flex-col gap-8">
+              {[...Array(3)].map((_, i) => <CardSkeleton key={i} />)}
             </div>
           ) : services.length > 0 ? (
             <div className="flex flex-col gap-8">
@@ -126,10 +126,7 @@ export default function ServicesPage() {
               })}
             </div>
           ) : (
-            <div className="text-center py-16">
-              <Building2 className="w-12 h-12 text-text-muted/30 mx-auto mb-4" />
-              <p className="text-text-muted">暂无服务数据</p>
-            </div>
+            <EmptyState title="暂无服务信息" description="管理员正在完善内容，请稍后访问" />
           )}
         </div>
       </section>

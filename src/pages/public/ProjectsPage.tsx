@@ -7,9 +7,10 @@ import {
   Briefcase,
   Layers,
   Navigation,
-  Loader2,
   AlertCircle,
 } from 'lucide-react'
+import { CardSkeleton } from '@/components/shared/Skeleton'
+import { EmptyState } from '@/components/shared/EmptyState'
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
@@ -54,9 +55,10 @@ export default function ProjectsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 className="w-8 h-8 text-navy animate-spin" />
-        <span className="ml-3 text-text-secondary">加载项目数据...</span>
+      <div className="py-16 px-4">
+        <div className="max-w-7xl mx-auto grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => <CardSkeleton key={i} />)}
+        </div>
       </div>
     )
   }
@@ -181,12 +183,7 @@ export default function ProjectsPage() {
 
           {/* Empty state */}
           {filteredProjects.length === 0 && (
-            <div className="text-center py-20">
-              <Building2 className="w-16 h-16 text-text-muted/30 mx-auto mb-4" />
-              <p className="text-text-muted text-lg">
-                该类别暂无项目
-              </p>
-            </div>
+            <EmptyState title="暂无项目案例" description="项目信息正在整理中" />
           )}
         </div>
       </section>
@@ -194,7 +191,7 @@ export default function ProjectsPage() {
       {/* Stats Section */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="text-center p-6 rounded-xl bg-bg-gray">
               <div className="w-12 h-12 bg-navy/10 rounded-xl flex items-center justify-center mx-auto mb-3">
                 <Briefcase className="w-6 h-6 text-navy" />

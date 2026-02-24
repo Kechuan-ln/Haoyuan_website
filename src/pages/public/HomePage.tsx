@@ -12,6 +12,7 @@ import { getServices } from '@/services/services.service'
 import { getHomeContent } from '@/services/home-content.service'
 import { getIcon } from '@/config/icon-map'
 import { CATEGORY_LABELS } from '@/data/projects'
+import { SectionHeading } from '@/components/shared/SectionHeading'
 import type { Project } from '@/types/project'
 import type { Service } from '@/types/service'
 import type { HomeContent } from '@/types/home'
@@ -151,17 +152,17 @@ export default function HomePage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              to={ROUTES.SERVICES}
-              className="inline-flex items-center gap-2 rounded-lg bg-gold px-8 py-3.5 text-sm font-semibold text-navy transition-all hover:bg-gold-light hover:shadow-lg hover:shadow-gold/20"
+              to={ROUTES.ABOUT}
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-white/50 px-8 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/70"
             >
-              了解我们的业务
-              <ArrowRight className="w-4 h-4" />
+              了解我们
             </Link>
             <Link
-              to={ROUTES.BIDDING}
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-white/30 px-8 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/50"
+              to={ROUTES.CONTACT}
+              className="inline-flex items-center gap-2 rounded-lg bg-gold px-8 py-3.5 text-sm font-semibold text-navy transition-all hover:bg-gold-light hover:shadow-lg hover:shadow-gold/20"
             >
-              招标大厅
+              联系咨询
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
@@ -190,14 +191,10 @@ export default function HomePage() {
       {/* 全程三无忧 Section */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">
-              "全程三无忧" 服务理念
-            </h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              以质量、安全、进度三大维度构建全方位服务保障体系，让客户安心无忧
-            </p>
-          </div>
+          <SectionHeading
+            title='"全程三无忧" 服务理念'
+            subtitle="以质量、安全、进度三大维度构建全方位服务保障体系，让客户安心无忧"
+          />
           <div className="grid sm:grid-cols-3 gap-8">
             {threeNoWorries.map((item) => {
               const Icon = getIcon(item.iconName)
@@ -221,14 +218,10 @@ export default function HomePage() {
       {/* Business Services Section */}
       <section className="py-20 sm:py-24 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">
-              五大业务板块
-            </h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              覆盖工程建设全生命周期的专业技术服务
-            </p>
-          </div>
+          <SectionHeading
+            title="五大业务板块"
+            subtitle="覆盖工程建设全生命周期的专业技术服务"
+          />
 
           {servicesLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -270,14 +263,10 @@ export default function HomePage() {
       {/* Featured Projects Section */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">
-              精选工程业绩
-            </h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              深耕工程建设领域，为众多标杆项目提供优质技术服务
-            </p>
-          </div>
+          <SectionHeading
+            title="精选工程业绩"
+            subtitle="深耕工程建设领域，为众多标杆项目提供优质技术服务"
+          />
 
           {projectsLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -340,7 +329,7 @@ export default function HomePage() {
       {/* Stats Section */}
       <section className="bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-20 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((stat) => {
               const Icon = getIcon(stat.iconName)
               return (

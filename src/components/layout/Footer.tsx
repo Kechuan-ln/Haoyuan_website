@@ -71,6 +71,8 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <p className="text-center text-sm text-white/50">
             &copy; 2025 {COMPANY.name} 版权所有
+            <span className="mx-2">|</span>
+            粤ICP备XXXXXXXX号
           </p>
         </div>
       </div>
