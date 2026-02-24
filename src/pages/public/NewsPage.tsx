@@ -7,6 +7,9 @@ import {
 } from 'lucide-react'
 import { CardSkeleton } from '@/components/shared/Skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
+import HeroSection from '@/components/shared/HeroSection'
+import AnimatedSection from '@/components/shared/AnimatedSection'
+import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
 import type { DocumentSnapshot } from 'firebase/firestore'
 import type { Article, ArticleCategory } from '@/types/article'
 import { getArticles } from '@/services/articles.service'
@@ -28,6 +31,8 @@ const CATEGORY_BADGE_MAP: Record<ArticleCategory, { label: string; className: st
 }
 
 const PAGE_SIZE = 9
+
+const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
 
 export default function NewsPage() {
   const [activeTab, setActiveTab] = useState('all')
@@ -84,19 +89,10 @@ export default function NewsPage() {
   return (
     <div>
       {/* Hero Banner */}
-      <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-20 sm:py-24 px-4 overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.06]">
-          <div className="absolute top-10 left-10 w-40 h-40 border-2 border-white rotate-45" />
-          <div className="absolute top-32 right-20 w-24 h-24 border-2 border-white rotate-12" />
-          <div className="absolute bottom-20 left-1/4 w-32 h-32 border-2 border-white -rotate-12" />
-        </div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">新闻动态</h1>
-          <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto">
-            了解全程创优的最新动态和行业资讯
-          </p>
-        </div>
-      </section>
+      <HeroSection
+        title="新闻动态"
+        subtitle="了解全程创优的最新动态和行业资讯"
+      />
 
       {/* Category Tabs */}
       <section className="bg-white border-b border-border sticky top-0 z-10">
@@ -130,58 +126,58 @@ export default function NewsPage() {
             <EmptyState title="暂无新闻资讯" description="敬请期待后续更新" icon="📰" />
           ) : (
             <div className="space-y-5">
-              {articles.map((article) => {
+              {articles.map((article, i) => {
                 const badge = CATEGORY_BADGE_MAP[article.category]
                 return (
-                  <Link
-                    key={article.id}
-                    to={`/news/${article.id}`}
-                    className="group flex bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-border"
-                  >
-                    {/* Thumbnail */}
-                    <div className="hidden sm:flex w-48 lg:w-56 shrink-0 items-center justify-center overflow-hidden">
-                      {article.coverImageUrl ? (
-                        <img
+                  <AnimatedSection key={article.id} delay={STAGGER_DELAYS[i % 4]}>
+                    <Link
+                      to={`/news/${article.id}`}
+                      className="group flex bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-border"
+                    >
+                      {/* Thumbnail */}
+                      <div className="hidden sm:flex w-48 lg:w-56 shrink-0 items-center justify-center overflow-hidden">
+                        <ImageWithFallback
                           src={article.coverImageUrl}
                           alt={article.title}
                           className="w-full h-full object-cover"
+                          fallback={
+                            <div className="w-full h-full bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center">
+                              <ImageIcon className="w-10 h-10 text-navy/20" />
+                            </div>
+                          }
                         />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center">
-                          <ImageIcon className="w-10 h-10 text-navy/20" />
-                        </div>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Content */}
-                    <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between min-w-0">
-                      <div>
-                        <div className="flex items-center gap-3 mb-3">
-                          <span
-                            className={`text-xs font-medium px-2.5 py-1 rounded-full ${badge.className}`}
-                          >
-                            {badge.label}
-                          </span>
-                          <span className="flex items-center gap-1 text-xs text-text-muted">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {formatDate(article.publishedAt ?? article.createdAt)}
+                      {/* Content */}
+                      <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between min-w-0">
+                        <div>
+                          <div className="flex items-center gap-3 mb-3">
+                            <span
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full ${badge.className}`}
+                            >
+                              {badge.label}
+                            </span>
+                            <span className="flex items-center gap-1 text-xs text-text-muted">
+                              <Calendar className="w-3.5 h-3.5" />
+                              {formatDate(article.publishedAt ?? article.createdAt)}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-text-primary mb-2 group-hover:text-navy transition-colors line-clamp-1">
+                            {article.title}
+                          </h3>
+                          <p className="text-sm text-text-secondary leading-relaxed line-clamp-2">
+                            {article.excerpt}
+                          </p>
+                        </div>
+                        <div className="mt-4">
+                          <span className="inline-flex items-center gap-1 text-teal text-sm font-medium group-hover:gap-2 transition-all">
+                            阅读更多
+                            <ArrowRight className="w-4 h-4" />
                           </span>
                         </div>
-                        <h3 className="text-lg font-bold text-text-primary mb-2 group-hover:text-navy transition-colors line-clamp-1">
-                          {article.title}
-                        </h3>
-                        <p className="text-sm text-text-secondary leading-relaxed line-clamp-2">
-                          {article.excerpt}
-                        </p>
                       </div>
-                      <div className="mt-4">
-                        <span className="inline-flex items-center gap-1 text-teal text-sm font-medium group-hover:gap-2 transition-all">
-                          阅读更多
-                          <ArrowRight className="w-4 h-4" />
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </AnimatedSection>
                 )
               })}
             </div>

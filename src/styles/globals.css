@@ -49,6 +49,39 @@ body {
   }
 }
 
+/* Scroll-triggered fade-in (IntersectionObserver adds .is-visible) */
+.scroll-animate {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.scroll-animate.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.scroll-animate.delay-100 { transition-delay: 0.1s; }
+.scroll-animate.delay-200 { transition-delay: 0.2s; }
+.scroll-animate.delay-300 { transition-delay: 0.3s; }
+.scroll-animate.delay-400 { transition-delay: 0.4s; }
+
+.scroll-animate-left {
+  opacity: 0; transform: translateX(-24px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.scroll-animate-left.is-visible { opacity: 1; transform: translateX(0); }
+
+.scroll-animate-scale {
+  opacity: 0; transform: scale(0.92);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.scroll-animate-scale.is-visible { opacity: 1; transform: scale(1); }
+
+/* Mobile menu slide */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Line clamp utility */
 .line-clamp-2 {
   display: -webkit-box;

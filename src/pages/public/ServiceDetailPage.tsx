@@ -12,7 +12,12 @@ import {
 import { getService, getServices } from '@/services/services.service'
 import { getIcon } from '@/config/icon-map'
 import { ROUTES } from '@/config/routes'
+import AnimatedSection from '@/components/shared/AnimatedSection'
 import type { Service } from '@/types/service'
+
+/* ---------- Stagger delays ---------- */
+
+const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
 
 export default function ServiceDetailPage() {
   const { id } = useParams()
@@ -102,7 +107,7 @@ export default function ServiceDetailPage() {
         </div>
       </section>
 
-      {/* Hero Section */}
+      {/* Hero Section — custom left-aligned layout, kept as-is */}
       <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-16 sm:py-20 px-4 overflow-hidden">
         <div className="absolute inset-0 opacity-[0.06]">
           <div className="absolute top-10 right-20 w-32 h-32 border-2 border-white rotate-12" />
@@ -131,7 +136,7 @@ export default function ServiceDetailPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-10">
             {/* Main Content */}
-            <div className="lg:col-span-2">
+            <AnimatedSection variant="left" className="lg:col-span-2">
               {/* Detailed Description */}
               <div className="mb-12">
                 <h2 className="text-2xl font-bold text-navy mb-6">服务介绍</h2>
@@ -144,14 +149,16 @@ export default function ServiceDetailPage() {
               <div className="mb-12">
                 <h2 className="text-2xl font-bold text-navy mb-6">服务范围</h2>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {service.scopeItems.map((item) => (
-                    <div
+                  {service.scopeItems.map((item, i) => (
+                    <AnimatedSection
                       key={item}
-                      className="flex items-start gap-3 bg-bg-gray rounded-xl p-4"
+                      delay={STAGGER_DELAYS[i % 4]}
                     >
-                      <CheckCircle className="w-5 h-5 text-teal shrink-0 mt-0.5" />
-                      <span className="text-text-primary">{item}</span>
-                    </div>
+                      <div className="flex items-start gap-3 bg-bg-gray rounded-xl p-4">
+                        <CheckCircle className="w-5 h-5 text-teal shrink-0 mt-0.5" />
+                        <span className="text-text-primary">{item}</span>
+                      </div>
+                    </AnimatedSection>
                   ))}
                 </div>
               </div>
@@ -171,10 +178,10 @@ export default function ServiceDetailPage() {
                   ))}
                 </div>
               </div>
-            </div>
+            </AnimatedSection>
 
             {/* Sidebar */}
-            <div className="lg:col-span-1">
+            <AnimatedSection delay={200} className="lg:col-span-1">
               {/* Related Projects */}
               <div className="bg-bg-gray rounded-xl p-6 mb-6">
                 <h3 className="text-lg font-bold text-navy mb-4">相关项目</h3>
@@ -213,7 +220,7 @@ export default function ServiceDetailPage() {
                   联系我们
                 </Link>
               </div>
-            </div>
+            </AnimatedSection>
           </div>
         </div>
       </section>

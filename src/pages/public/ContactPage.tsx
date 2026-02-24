@@ -11,6 +11,8 @@ import {
 import { COMPANY } from '@/config/constants'
 import { getSiteSettings } from '@/services/site-settings.service'
 import { submitContact } from '@/services/contacts.service'
+import HeroSection from '@/components/shared/HeroSection'
+import AnimatedSection from '@/components/shared/AnimatedSection'
 
 interface ContactForm {
   name: string
@@ -41,6 +43,8 @@ const AMAP_KEY = '5c929006a41b4bd38b879764ebdbbcfd'
 // 深圳市光明区光明街道 approximate coordinates
 const COMPANY_LNG = 113.93
 const COMPANY_LAT = 22.77
+
+const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
 
 function AMapContainer() {
   const mapRef = useRef<HTMLDivElement>(null)
@@ -193,22 +197,20 @@ export default function ContactPage() {
     setSubmitted(false)
   }
 
+  const contactInfoItems = [
+    { icon: MapPin, label: '公司地址', value: contactAddress },
+    { icon: Phone, label: '联系电话', value: contactPhone },
+    { icon: Mail, label: '电子邮箱', value: contactEmail },
+    { icon: Clock, label: '工作时间', value: contactHours },
+  ]
+
   return (
     <div>
       {/* Hero Banner */}
-      <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-20 sm:py-24 px-4 overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.06]">
-          <div className="absolute top-10 left-10 w-40 h-40 border-2 border-white rotate-45" />
-          <div className="absolute top-32 right-20 w-24 h-24 border-2 border-white rotate-12" />
-          <div className="absolute bottom-20 left-1/4 w-32 h-32 border-2 border-white -rotate-12" />
-        </div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">联系我们</h1>
-          <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto">
-            期待与您的合作，欢迎随时联系
-          </p>
-        </div>
-      </section>
+      <HeroSection
+        title="联系我们"
+        subtitle="期待与您的合作，欢迎随时联系"
+      />
 
       {/* Main Content */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
@@ -218,192 +220,190 @@ export default function ContactPage() {
             <div className="space-y-8">
               {/* Contact Info Cards */}
               <div className="grid sm:grid-cols-2 gap-4">
-                {[
-                  { icon: MapPin, label: '公司地址', value: contactAddress },
-                  { icon: Phone, label: '联系电话', value: contactPhone },
-                  { icon: Mail, label: '电子邮箱', value: contactEmail },
-                  { icon: Clock, label: '工作时间', value: contactHours },
-                ].map((info) => (
-                  <div
-                    key={info.label}
-                    className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-border"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-navy/10 rounded-xl flex items-center justify-center shrink-0">
-                        <info.icon className="w-6 h-6 text-navy" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-text-muted mb-1">{info.label}</p>
-                        <p className="font-semibold text-text-primary">{info.value}</p>
+                {contactInfoItems.map((info, i) => (
+                  <AnimatedSection key={info.label} delay={STAGGER_DELAYS[i]}>
+                    <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-border">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-navy/10 rounded-xl flex items-center justify-center shrink-0">
+                          <info.icon className="w-6 h-6 text-navy" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-text-muted mb-1">{info.label}</p>
+                          <p className="font-semibold text-text-primary">{info.value}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </AnimatedSection>
                 ))}
               </div>
 
               {/* AMap 高德地图 */}
-              <div className="bg-white rounded-xl border border-border shadow-md overflow-hidden">
-                <AMapContainer />
-              </div>
+              <AnimatedSection variant="scale">
+                <div className="bg-white rounded-xl border border-border shadow-md overflow-hidden">
+                  <AMapContainer />
+                </div>
+              </AnimatedSection>
             </div>
 
             {/* Right Column: Contact Form */}
-            <div className="bg-white rounded-xl shadow-md border border-border p-8">
-              {submitted ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                    <CheckCircle className="w-10 h-10 text-green-500" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-navy mb-3">提交成功</h3>
-                  <p className="text-text-secondary mb-8 max-w-sm">
-                    感谢您的留言，我们会尽快与您联系！
-                  </p>
-                  <button
-                    onClick={handleReset}
-                    className="inline-flex items-center gap-2 rounded-lg border-2 border-navy px-6 py-2.5 text-sm font-semibold text-navy transition-all hover:bg-navy hover:text-white"
-                  >
-                    继续留言
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-navy mb-2">在线留言</h2>
-                    <p className="text-text-secondary text-sm">
-                      请填写以下表单，我们将尽快回复您
+            <AnimatedSection variant="left" delay={200}>
+              <div className="bg-white rounded-xl shadow-md border border-border p-8">
+                {submitted ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
+                      <CheckCircle className="w-10 h-10 text-green-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-navy mb-3">提交成功</h3>
+                    <p className="text-text-secondary mb-8 max-w-sm">
+                      感谢您的留言，我们会尽快与您联系！
                     </p>
-                  </div>
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    <div className="grid sm:grid-cols-2 gap-5">
-                      {/* 姓名 */}
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1.5">
-                          姓名 <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={form.name}
-                          onChange={(e) => handleChange('name', e.target.value)}
-                          placeholder="请输入您的姓名"
-                          className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy ${
-                            errors.name ? 'border-red-400 bg-red-50' : 'border-border bg-white'
-                          }`}
-                        />
-                        {errors.name && (
-                          <p className="mt-1 text-xs text-red-500">{errors.name}</p>
-                        )}
-                      </div>
-
-                      {/* 手机号 */}
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1.5">
-                          手机号 <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="tel"
-                          value={form.phone}
-                          onChange={(e) => handleChange('phone', e.target.value)}
-                          placeholder="请输入您的手机号"
-                          className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy ${
-                            errors.phone ? 'border-red-400 bg-red-50' : 'border-border bg-white'
-                          }`}
-                        />
-                        {errors.phone && (
-                          <p className="mt-1 text-xs text-red-500">{errors.phone}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-5">
-                      {/* 邮箱 */}
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1.5">
-                          邮箱
-                        </label>
-                        <input
-                          type="email"
-                          value={form.email}
-                          onChange={(e) => handleChange('email', e.target.value)}
-                          placeholder="请输入您的邮箱"
-                          className="w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy"
-                        />
-                      </div>
-
-                      {/* 公司名称 */}
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1.5">
-                          公司名称
-                        </label>
-                        <input
-                          type="text"
-                          value={form.company}
-                          onChange={(e) => handleChange('company', e.target.value)}
-                          placeholder="请输入您的公司名称"
-                          className="w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 主题 */}
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1.5">
-                        主题 <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={form.subject}
-                        onChange={(e) => handleChange('subject', e.target.value)}
-                        placeholder="请输入留言主题"
-                        className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy ${
-                          errors.subject ? 'border-red-400 bg-red-50' : 'border-border bg-white'
-                        }`}
-                      />
-                      {errors.subject && (
-                        <p className="mt-1 text-xs text-red-500">{errors.subject}</p>
-                      )}
-                    </div>
-
-                    {/* 留言内容 */}
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1.5">
-                        留言内容 <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={form.message}
-                        onChange={(e) => handleChange('message', e.target.value)}
-                        placeholder="请输入您的留言内容..."
-                        rows={5}
-                        className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy resize-none ${
-                          errors.message ? 'border-red-400 bg-red-50' : 'border-border bg-white'
-                        }`}
-                      />
-                      {errors.message && (
-                        <p className="mt-1 text-xs text-red-500">{errors.message}</p>
-                      )}
-                    </div>
-
-                    {/* Submit Button */}
                     <button
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gold px-8 py-3 text-sm font-semibold text-navy transition-all hover:bg-gold-light hover:shadow-lg hover:shadow-gold/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                      onClick={handleReset}
+                      className="inline-flex items-center gap-2 rounded-lg border-2 border-navy px-6 py-2.5 text-sm font-semibold text-navy transition-all hover:bg-navy hover:text-white"
                     >
-                      {submitting ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-navy border-t-transparent" />
-                          提交中...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          提交留言
-                        </>
-                      )}
+                      继续留言
                     </button>
-                  </form>
-                </>
-              )}
-            </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-8">
+                      <h2 className="text-2xl font-bold text-navy mb-2">在线留言</h2>
+                      <p className="text-text-secondary text-sm">
+                        请填写以下表单，我们将尽快回复您
+                      </p>
+                    </div>
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                      <div className="grid sm:grid-cols-2 gap-5">
+                        {/* 姓名 */}
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1.5">
+                            姓名 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={form.name}
+                            onChange={(e) => handleChange('name', e.target.value)}
+                            placeholder="请输入您的姓名"
+                            className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy ${
+                              errors.name ? 'border-red-400 bg-red-50' : 'border-border bg-white'
+                            }`}
+                          />
+                          {errors.name && (
+                            <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+                          )}
+                        </div>
+
+                        {/* 手机号 */}
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1.5">
+                            手机号 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            value={form.phone}
+                            onChange={(e) => handleChange('phone', e.target.value)}
+                            placeholder="请输入您的手机号"
+                            className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy ${
+                              errors.phone ? 'border-red-400 bg-red-50' : 'border-border bg-white'
+                            }`}
+                          />
+                          {errors.phone && (
+                            <p className="mt-1 text-xs text-red-500">{errors.phone}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-5">
+                        {/* 邮箱 */}
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1.5">
+                            邮箱
+                          </label>
+                          <input
+                            type="email"
+                            value={form.email}
+                            onChange={(e) => handleChange('email', e.target.value)}
+                            placeholder="请输入您的邮箱"
+                            className="w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy"
+                          />
+                        </div>
+
+                        {/* 公司名称 */}
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1.5">
+                            公司名称
+                          </label>
+                          <input
+                            type="text"
+                            value={form.company}
+                            onChange={(e) => handleChange('company', e.target.value)}
+                            placeholder="请输入您的公司名称"
+                            className="w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy"
+                          />
+                        </div>
+                      </div>
+
+                      {/* 主题 */}
+                      <div>
+                        <label className="block text-sm font-medium text-text-primary mb-1.5">
+                          主题 <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={form.subject}
+                          onChange={(e) => handleChange('subject', e.target.value)}
+                          placeholder="请输入留言主题"
+                          className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy ${
+                            errors.subject ? 'border-red-400 bg-red-50' : 'border-border bg-white'
+                          }`}
+                        />
+                        {errors.subject && (
+                          <p className="mt-1 text-xs text-red-500">{errors.subject}</p>
+                        )}
+                      </div>
+
+                      {/* 留言内容 */}
+                      <div>
+                        <label className="block text-sm font-medium text-text-primary mb-1.5">
+                          留言内容 <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          value={form.message}
+                          onChange={(e) => handleChange('message', e.target.value)}
+                          placeholder="请输入您的留言内容..."
+                          rows={5}
+                          className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy resize-none ${
+                            errors.message ? 'border-red-400 bg-red-50' : 'border-border bg-white'
+                          }`}
+                        />
+                        {errors.message && (
+                          <p className="mt-1 text-xs text-red-500">{errors.message}</p>
+                        )}
+                      </div>
+
+                      {/* Submit Button */}
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gold px-8 py-3 text-sm font-semibold text-navy transition-all hover:bg-gold-light hover:shadow-lg hover:shadow-gold/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {submitting ? (
+                          <>
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-navy border-t-transparent" />
+                            提交中...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4" />
+                            提交留言
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  </>
+                )}
+              </div>
+            </AnimatedSection>
           </div>
         </div>
       </section>
