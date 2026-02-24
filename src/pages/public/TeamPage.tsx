@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import {
   Building2,
-  ArrowRight,
   CheckCircle,
   Loader2,
 } from 'lucide-react'
 import { COMPANY } from '@/config/constants'
-import { ROUTES } from '@/config/routes'
 import { getIcon } from '@/config/icon-map'
 import { getTeamContent } from '@/services/team-content.service'
+import { SectionHeading } from '@/components/shared/SectionHeading'
+import HeroSection from '@/components/shared/HeroSection'
+import AnimatedSection from '@/components/shared/AnimatedSection'
+import CTASection from '@/components/shared/CTASection'
+import { ROUTES } from '@/config/routes'
 import type { TeamContent } from '@/types/team'
+
+/* ---------- Stagger delays ---------- */
+
+const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
 
 /* ---------- Default Content (fallback when Firestore is empty) ---------- */
 
@@ -166,28 +172,16 @@ export default function TeamPage() {
   return (
     <div>
       {/* Hero Banner */}
-      <section className="bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-20 sm:py-24 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.05]">
-          <div className="absolute top-8 right-16 w-32 h-32 border-2 border-white rotate-45" />
-          <div className="absolute bottom-12 left-20 w-24 h-24 border-2 border-white rotate-12" />
-        </div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">组织架构</h1>
-          <p className="text-lg text-white/70 max-w-2xl mx-auto">
-            三支柱管理体系，确保项目高效交付
-          </p>
-        </div>
-      </section>
+      <HeroSection
+        title="团队介绍"
+        subtitle="三支柱管理体系，确保项目高效交付"
+        decorationCount={2}
+      />
 
       {/* Three Pillars Organization Chart */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">三支柱管理体系</h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              以战略决策、职能管理、项目执行三大支柱为核心，构建高效组织架构
-            </p>
-          </div>
+          <SectionHeading title="三支柱管理体系" subtitle="以战略决策、职能管理、项目执行三大支柱为核心，构建高效组织架构" />
 
           {/* Top: Company name node */}
           <div className="flex justify-center mb-8">
@@ -218,30 +212,32 @@ export default function TeamPage() {
 
           {/* Three Pillar Cards */}
           <div className="grid sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {content.pillars.map((pillar) => {
+            {content.pillars.map((pillar, i) => {
               const PillarIcon = getIcon(pillar.iconName)
               const colors = getColorClasses(pillar.colorTheme)
               return (
-                <div
+                <AnimatedSection
                   key={pillar.title}
-                  className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
+                  delay={STAGGER_DELAYS[i % STAGGER_DELAYS.length]}
                 >
-                  <div className={`${colors.bg} p-5`}>
-                    <PillarIcon className="w-8 h-8 text-white mb-2" />
-                    <h3 className="text-lg font-bold text-white">{pillar.title}</h3>
-                    <p className="text-white/80 text-sm mt-1">{pillar.description}</p>
+                  <div className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl hover:translate-y-[-4px] transition-all duration-300 h-full">
+                    <div className={`${colors.bg} p-5`}>
+                      <PillarIcon className="w-8 h-8 text-white mb-2" />
+                      <h3 className="text-lg font-bold text-white">{pillar.title}</h3>
+                      <p className="text-white/80 text-sm mt-1">{pillar.description}</p>
+                    </div>
+                    <div className="p-5">
+                      <ul className="space-y-3">
+                        {pillar.subItems.map((item) => (
+                          <li key={item} className="flex items-start gap-2 text-sm text-text-secondary">
+                            <CheckCircle className={`w-4 h-4 ${colors.text} shrink-0 mt-0.5`} />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                  <div className="p-5">
-                    <ul className="space-y-3">
-                      {pillar.subItems.map((item) => (
-                        <li key={item} className="flex items-start gap-2 text-sm text-text-secondary">
-                          <CheckCircle className={`w-4 h-4 ${colors.text} shrink-0 mt-0.5`} />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+                </AnimatedSection>
               )
             })}
           </div>
@@ -250,16 +246,18 @@ export default function TeamPage() {
           <div className="mt-14 max-w-4xl mx-auto">
             <h3 className="text-xl font-bold text-navy text-center mb-6">职能部门设置</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {content.departments.map((dept) => {
+              {content.departments.map((dept, i) => {
                 const DeptIcon = getIcon(dept.iconName)
                 return (
-                  <div
+                  <AnimatedSection
                     key={dept.name}
-                    className="bg-white rounded-xl p-4 text-center shadow-sm hover:shadow-md transition-shadow border border-border"
+                    delay={STAGGER_DELAYS[i % 4]}
                   >
-                    <DeptIcon className="w-6 h-6 text-teal mx-auto mb-2" />
-                    <span className="text-sm font-medium text-text-primary">{dept.name}</span>
-                  </div>
+                    <div className="bg-white rounded-xl p-4 text-center shadow-sm hover:shadow-md hover:translate-y-[-2px] transition-all duration-300 border border-border h-full">
+                      <DeptIcon className="w-6 h-6 text-teal mx-auto mb-2" />
+                      <span className="text-sm font-medium text-text-primary">{dept.name}</span>
+                    </div>
+                  </AnimatedSection>
                 )
               })}
             </div>
@@ -270,31 +268,28 @@ export default function TeamPage() {
       {/* RACI Matrix Section */}
       <section className="py-20 sm:py-24 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">RACI 责任矩阵</h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              明确职责分工，确保每一项工作都有清晰的责任归属
-            </p>
-          </div>
+          <SectionHeading title="RACI 责任矩阵" subtitle="明确职责分工，确保每一项工作都有清晰的责任归属" />
 
           {/* RACI Legend */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto mb-12">
-            {RACI_LEGEND.map((item) => (
-              <div
+            {RACI_LEGEND.map((item, i) => (
+              <AnimatedSection
                 key={item.letter}
-                className={`rounded-xl p-5 border-l-4 ${item.borderColor} bg-white shadow-md`}
+                delay={STAGGER_DELAYS[i % STAGGER_DELAYS.length]}
               >
-                <div className="flex items-center gap-3 mb-2">
-                  <span className={`inline-flex items-center justify-center w-10 h-10 rounded-lg ${item.color} text-white font-bold text-lg`}>
-                    {item.letter}
-                  </span>
-                  <div>
-                    <span className="block text-sm font-bold text-text-primary">{item.chinese}</span>
-                    <span className="block text-xs text-text-muted">{item.label}</span>
+                <div className={`rounded-xl p-5 border-l-4 ${item.borderColor} bg-white shadow-md h-full`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`inline-flex items-center justify-center w-10 h-10 rounded-lg ${item.color} text-white font-bold text-lg`}>
+                      {item.letter}
+                    </span>
+                    <div>
+                      <span className="block text-sm font-bold text-text-primary">{item.chinese}</span>
+                      <span className="block text-xs text-text-muted">{item.label}</span>
+                    </div>
                   </div>
+                  <p className="text-sm text-text-secondary">{item.detail}</p>
                 </div>
-                <p className="text-sm text-text-secondary">{item.detail}</p>
-              </div>
+              </AnimatedSection>
             ))}
           </div>
 
@@ -350,26 +345,23 @@ export default function TeamPage() {
       {/* Team Culture */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">团队文化</h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              全程创优的每一位成员都以专业和责任为核心价值
-            </p>
-          </div>
+          <SectionHeading title="团队文化" subtitle="全程创优的每一位成员都以专业和责任为核心价值" />
           <div className="grid sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {content.strengths.map((strength) => {
+            {content.strengths.map((strength, i) => {
               const StrengthIcon = getIcon(strength.iconName)
               return (
-                <div
+                <AnimatedSection
                   key={strength.title}
-                  className="bg-white rounded-xl p-8 text-center shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
+                  delay={STAGGER_DELAYS[i % STAGGER_DELAYS.length]}
                 >
-                  <div className="w-16 h-16 bg-navy/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <StrengthIcon className="w-8 h-8 text-navy" />
+                  <div className="bg-white rounded-xl p-8 text-center shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] h-full">
+                    <div className="w-16 h-16 bg-navy/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <StrengthIcon className="w-8 h-8 text-navy" />
+                    </div>
+                    <h3 className="text-xl font-bold text-navy mb-3">{strength.title}</h3>
+                    <p className="text-text-secondary leading-relaxed text-sm">{strength.description}</p>
                   </div>
-                  <h3 className="text-xl font-bold text-navy mb-3">{strength.title}</h3>
-                  <p className="text-text-secondary leading-relaxed text-sm">{strength.description}</p>
-                </div>
+                </AnimatedSection>
               )
             })}
           </div>
@@ -377,23 +369,11 @@ export default function TeamPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 px-4 bg-gradient-to-r from-navy to-navy-dark text-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-4">
-            期待优秀的您加入全程创优
-          </h2>
-          <p className="text-white/70 mb-8">
-            与我们一起，为工程建设事业贡献专业力量
-          </p>
-          <Link
-            to={ROUTES.CONTACT}
-            className="inline-flex items-center gap-2 rounded-lg bg-gold px-8 py-3.5 text-sm font-semibold text-navy transition-all hover:bg-gold-light"
-          >
-            联系我们
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
+      <CTASection
+        title="期待优秀的您加入全程创优"
+        subtitle="与我们一起，为工程建设事业贡献专业力量"
+        primaryAction={{ label: '联系我们', href: ROUTES.CONTACT }}
+      />
     </div>
   )
 }

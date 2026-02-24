@@ -14,8 +14,8 @@ export function ImageWithFallback({ src, alt, fallback, ...props }: ImageWithFal
     return fallback ? (
       <>{fallback}</>
     ) : (
-      <div className="bg-gray-100 flex items-center justify-center w-full h-full">
-        <span className="text-gray-400 text-lg font-medium">{alt[0]}</span>
+      <div className="bg-bg-gray flex items-center justify-center w-full h-full">
+        <span className="text-text-muted text-lg font-medium">{alt[0]}</span>
       </div>
     )
   }

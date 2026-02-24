@@ -17,7 +17,13 @@ import {
 } from '@/data/projects'
 import { ROUTES } from '@/config/routes'
 import { getProject, getProjects } from '@/services/projects.service'
+import AnimatedSection from '@/components/shared/AnimatedSection'
+import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
 import type { Project } from '@/types/project'
+
+/* ---------- Stagger delays ---------- */
+
+const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
 
 export default function ProjectDetailPage() {
   const { id } = useParams()
@@ -78,7 +84,7 @@ export default function ProjectDetailPage() {
 
   const colors = CATEGORY_COLORS[project.category] ?? {
     bg: 'bg-gray-100',
-    text: 'text-gray-700',
+    text: 'text-text-secondary',
   }
   const categoryLabel = CATEGORY_LABELS[project.category] ?? project.category
 
@@ -114,7 +120,7 @@ export default function ProjectDetailPage() {
         </div>
       </section>
 
-      {/* Hero Section */}
+      {/* Hero Section — custom left-aligned layout, kept as-is */}
       <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-16 sm:py-20 px-4 overflow-hidden">
         <div className="absolute inset-0 opacity-[0.06]">
           <div className="absolute top-10 right-20 w-32 h-32 border-2 border-white rotate-12" />
@@ -138,7 +144,7 @@ export default function ProjectDetailPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-10">
             {/* Main Content */}
-            <div className="lg:col-span-2">
+            <AnimatedSection variant="left" className="lg:col-span-2">
               {/* Project Details */}
               <div className="bg-white rounded-xl border border-border overflow-hidden mb-10">
                 <div className="bg-bg-gray px-6 py-4 border-b border-border">
@@ -198,38 +204,48 @@ export default function ProjectDetailPage() {
                 {galleryImages.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {galleryImages.map((url, i) => (
-                      <div
+                      <AnimatedSection
                         key={i}
-                        className="aspect-[4/3] rounded-xl overflow-hidden border border-border"
+                        delay={STAGGER_DELAYS[i % 3]}
                       >
-                        <img
-                          src={url}
-                          alt={`${project.title} - 图片 ${i + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                        <div className="aspect-[4/3] rounded-xl overflow-hidden border border-border">
+                          <ImageWithFallback
+                            src={url}
+                            alt={`${project.title} - 图片 ${i + 1}`}
+                            className="w-full h-full object-cover"
+                            fallback={
+                              <div className="w-full h-full bg-bg-gray flex flex-col items-center justify-center">
+                                <Camera className="w-8 h-8 text-text-muted/30 mb-2" />
+                                <span className="text-xs text-text-muted/50">加载失败</span>
+                              </div>
+                            }
+                          />
+                        </div>
+                      </AnimatedSection>
                     ))}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {Array.from({ length: 6 }).map((_, i) => (
-                      <div
+                      <AnimatedSection
                         key={i}
-                        className="aspect-[4/3] bg-bg-gray rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-border"
+                        delay={STAGGER_DELAYS[i % 3]}
                       >
-                        <Camera className="w-8 h-8 text-text-muted/30 mb-2" />
-                        <span className="text-xs text-text-muted/50">
-                          项目图片
-                        </span>
-                      </div>
+                        <div className="aspect-[4/3] bg-bg-gray rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-border">
+                          <Camera className="w-8 h-8 text-text-muted/30 mb-2" />
+                          <span className="text-xs text-text-muted/50">
+                            项目图片
+                          </span>
+                        </div>
+                      </AnimatedSection>
                     ))}
                   </div>
                 )}
               </div>
-            </div>
+            </AnimatedSection>
 
             {/* Sidebar */}
-            <div className="lg:col-span-1">
+            <AnimatedSection delay={200} className="lg:col-span-1">
               {/* Back Link */}
               <Link
                 to={ROUTES.PROJECTS}
@@ -264,7 +280,7 @@ export default function ProjectDetailPage() {
                   </div>
                 </div>
               )}
-            </div>
+            </AnimatedSection>
           </div>
         </div>
       </section>

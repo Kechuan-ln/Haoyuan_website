@@ -157,7 +157,7 @@ export default function Header() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <nav className="lg:hidden border-t border-white/10">
+        <nav className="lg:hidden border-t border-white/10 animate-[slideDown_0.2s_ease-out]">
           <div className="px-4 py-3 space-y-1">
             {NAV_LINKS.map((link) => (
               <Link

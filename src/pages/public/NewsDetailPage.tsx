@@ -13,7 +13,13 @@ import type { Article, ArticleCategory } from '@/types/article'
 import { getArticle, getArticles } from '@/services/articles.service'
 import { formatDate } from '@/utils/format'
 import { ROUTES } from '@/config/routes'
+import AnimatedSection from '@/components/shared/AnimatedSection'
+import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
 import DOMPurify from 'dompurify'
+
+/* ---------- Stagger delays ---------- */
+
+const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
 
 const CATEGORY_BADGE_MAP: Record<ArticleCategory, { label: string; className: string }> = {
   news: { label: '新闻动态', className: 'bg-teal/10 text-teal' },
@@ -106,19 +112,18 @@ export default function NewsDetailPage() {
         <div className="max-w-4xl mx-auto">
           <article className="bg-white rounded-xl shadow-md border border-border overflow-hidden">
             {/* Cover Image */}
-            {article.coverImageUrl ? (
-              <div className="h-64 sm:h-80 overflow-hidden">
-                <img
-                  src={article.coverImageUrl}
-                  alt={article.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="h-64 sm:h-80 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center">
-                <ImageIcon className="w-16 h-16 text-navy/15" />
-              </div>
-            )}
+            <div className="h-64 sm:h-80 overflow-hidden">
+              <ImageWithFallback
+                src={article.coverImageUrl}
+                alt={article.title}
+                className="w-full h-full object-cover"
+                fallback={
+                  <div className="w-full h-full bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center">
+                    <ImageIcon className="w-16 h-16 text-navy/15" />
+                  </div>
+                }
+              />
+            </div>
 
             <div className="p-6 sm:p-10">
               {/* Title */}
@@ -171,45 +176,50 @@ export default function NewsDetailPage() {
           {/* Related Articles */}
           {relatedArticles.length > 0 && (
             <div className="mt-10">
-              <h2 className="text-xl font-bold text-navy mb-6">相关文章</h2>
+              <AnimatedSection>
+                <h2 className="text-xl font-bold text-navy mb-6">相关文章</h2>
+              </AnimatedSection>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {relatedArticles.map((related) => {
+                {relatedArticles.map((related, i) => {
                   const relatedBadge = CATEGORY_BADGE_MAP[related.category]
                   return (
-                    <Link
+                    <AnimatedSection
                       key={related.id}
-                      to={`/news/${related.id}`}
-                      className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-border"
+                      delay={STAGGER_DELAYS[i % STAGGER_DELAYS.length]}
                     >
-                      {related.coverImageUrl ? (
+                      <Link
+                        to={`/news/${related.id}`}
+                        className="group block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-border h-full"
+                      >
                         <div className="h-36 overflow-hidden">
-                          <img
+                          <ImageWithFallback
                             src={related.coverImageUrl}
                             alt={related.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            fallback={
+                              <div className="w-full h-full bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center">
+                                <ImageIcon className="w-8 h-8 text-navy/15" />
+                              </div>
+                            }
                           />
                         </div>
-                      ) : (
-                        <div className="h-36 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center">
-                          <ImageIcon className="w-8 h-8 text-navy/15" />
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full ${relatedBadge.className}`}
+                            >
+                              {relatedBadge.label}
+                            </span>
+                            <span className="text-xs text-text-muted">
+                              {formatDate(related.publishedAt ?? related.createdAt)}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-text-primary text-sm group-hover:text-navy transition-colors line-clamp-2">
+                            {related.title}
+                          </h3>
                         </div>
-                      )}
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${relatedBadge.className}`}
-                          >
-                            {relatedBadge.label}
-                          </span>
-                          <span className="text-xs text-text-muted">
-                            {formatDate(related.publishedAt ?? related.createdAt)}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-text-primary text-sm group-hover:text-navy transition-colors line-clamp-2">
-                          {related.title}
-                        </h3>
-                      </div>
-                    </Link>
+                      </Link>
+                    </AnimatedSection>
                   )
                 })}
               </div>

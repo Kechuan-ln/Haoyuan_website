@@ -19,7 +19,14 @@ import { getQualifications } from '@/services/qualifications.service'
 import { getIcon } from '@/config/icon-map'
 import { CardSkeleton } from '@/components/shared/Skeleton'
 import { SectionHeading } from '@/components/shared/SectionHeading'
+import HeroSection from '@/components/shared/HeroSection'
+import AnimatedSection from '@/components/shared/AnimatedSection'
 import type { Qualification } from '@/types/qualification'
+
+/* ---------- Stagger delays ---------- */
+
+const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
+
 
 const TRUST_STATS = [
   { value: '8+', label: '权威资质认证', icon: BadgeCheck },
@@ -57,18 +64,11 @@ export default function QualificationsPage() {
   return (
     <div>
       {/* Hero Banner */}
-      <section className="bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-20 sm:py-24 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.05]">
-          <div className="absolute top-8 right-16 w-32 h-32 border-2 border-white rotate-45" />
-          <div className="absolute bottom-12 left-20 w-24 h-24 border-2 border-white rotate-12" />
-        </div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">资质荣誉</h1>
-          <p className="text-lg text-white/70 max-w-2xl mx-auto">
-            全方位的资质认证，彰显专业实力
-          </p>
-        </div>
-      </section>
+      <HeroSection
+        title="企业资质"
+        subtitle="全方位的资质认证，彰显专业实力"
+        decorationCount={2}
+      />
 
       {/* Trust Stats */}
       <section className="bg-gradient-to-r from-gold-dark via-gold to-gold-dark py-6 px-4">
@@ -97,25 +97,27 @@ export default function QualificationsPage() {
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {qualifications.map((cert) => {
+              {qualifications.map((cert, i) => {
                 const Icon = getIcon(cert.iconName)
                 const colors = getColorClasses(cert.colorTheme)
                 return (
-                  <div
+                  <AnimatedSection
                     key={cert.title}
-                    className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                    delay={STAGGER_DELAYS[i % 3]}
                   >
-                    <div className="h-48 bg-gradient-to-br from-navy/5 to-navy/10 flex flex-col items-center justify-center">
-                      <div className={`w-16 h-16 ${colors.bg} rounded-xl flex items-center justify-center mb-3`}>
-                        <Icon className={`w-8 h-8 ${colors.text}`} />
+                    <div className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] cursor-pointer border border-border h-full">
+                      <div className="h-48 bg-gradient-to-br from-navy/5 to-navy/10 flex flex-col items-center justify-center">
+                        <div className={`w-16 h-16 ${colors.bg} rounded-xl flex items-center justify-center mb-3`}>
+                          <Icon className={`w-8 h-8 ${colors.text}`} />
+                        </div>
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-lg font-bold text-text-primary mb-1">{cert.title}</h3>
+                        <p className="text-sm text-teal font-medium mb-3">{cert.issuer}</p>
+                        <p className="text-sm text-text-secondary leading-relaxed">{cert.description}</p>
                       </div>
                     </div>
-                    <div className="p-6">
-                      <h3 className="text-lg font-bold text-text-primary mb-1">{cert.title}</h3>
-                      <p className="text-sm text-teal font-medium mb-3">{cert.issuer}</p>
-                      <p className="text-sm text-text-secondary leading-relaxed">{cert.description}</p>
-                    </div>
-                  </div>
+                  </AnimatedSection>
                 )
               })}
             </div>
@@ -128,29 +130,35 @@ export default function QualificationsPage() {
         <div className="max-w-7xl mx-auto">
           <SectionHeading title="ISO 三体系认证" subtitle="质量、环境、职业健康安全三大管理体系全面达标" />
           <div className="grid sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div className="bg-white rounded-xl p-8 border-l-4 border-navy shadow-md text-center">
-              <BadgeCheck className="w-12 h-12 text-navy mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-navy mb-2">ISO 9001</h3>
-              <p className="text-sm text-text-secondary">质量管理体系</p>
-              <p className="text-xs text-text-muted mt-2">确保服务质量标准化、可追溯</p>
-            </div>
-            <div className="bg-white rounded-xl p-8 border-l-4 border-teal shadow-md text-center">
-              <Leaf className="w-12 h-12 text-teal mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-teal mb-2">ISO 14001</h3>
-              <p className="text-sm text-text-secondary">环境管理体系</p>
-              <p className="text-xs text-text-muted mt-2">践行绿色建设，保护生态环境</p>
-            </div>
-            <div className="bg-white rounded-xl p-8 border-l-4 border-gold shadow-md text-center">
-              <HardHat className="w-12 h-12 text-gold-dark mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-gold-dark mb-2">ISO 45001</h3>
-              <p className="text-sm text-text-secondary">职业健康安全管理体系</p>
-              <p className="text-xs text-text-muted mt-2">保障安全生产，关爱员工健康</p>
-            </div>
+            <AnimatedSection delay={0}>
+              <div className="bg-white rounded-xl p-8 border-l-4 border-navy shadow-md text-center h-full">
+                <BadgeCheck className="w-12 h-12 text-navy mx-auto mb-4" />
+                <h3 className="text-lg font-bold text-navy mb-2">ISO 9001</h3>
+                <p className="text-sm text-text-secondary">质量管理体系</p>
+                <p className="text-xs text-text-muted mt-2">确保服务质量标准化、可追溯</p>
+              </div>
+            </AnimatedSection>
+            <AnimatedSection delay={100}>
+              <div className="bg-white rounded-xl p-8 border-l-4 border-teal shadow-md text-center h-full">
+                <Leaf className="w-12 h-12 text-teal mx-auto mb-4" />
+                <h3 className="text-lg font-bold text-teal mb-2">ISO 14001</h3>
+                <p className="text-sm text-text-secondary">环境管理体系</p>
+                <p className="text-xs text-text-muted mt-2">践行绿色建设，保护生态环境</p>
+              </div>
+            </AnimatedSection>
+            <AnimatedSection delay={200}>
+              <div className="bg-white rounded-xl p-8 border-l-4 border-gold shadow-md text-center h-full">
+                <HardHat className="w-12 h-12 text-gold-dark mx-auto mb-4" />
+                <h3 className="text-lg font-bold text-gold-dark mb-2">ISO 45001</h3>
+                <p className="text-sm text-text-secondary">职业健康安全管理体系</p>
+                <p className="text-xs text-text-muted mt-2">保障安全生产，关爱员工健康</p>
+              </div>
+            </AnimatedSection>
           </div>
         </div>
       </section>
 
-      {/* Why Trust Us */}
+      {/* Why Trust Us — kept raw (unique layout with embedded stats grid) */}
       <section className="py-20 sm:py-24 px-4 bg-gradient-to-br from-navy via-navy to-navy-dark text-white">
         <div className="max-w-4xl mx-auto text-center">
           <Award className="w-14 h-14 text-gold mx-auto mb-6" />
@@ -192,7 +200,7 @@ export default function QualificationsPage() {
             </Link>
             <Link
               to={ROUTES.CONTACT}
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-white/30 px-8 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-white/40 px-8 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
             >
               联系我们
             </Link>

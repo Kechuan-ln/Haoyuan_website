@@ -12,6 +12,9 @@ import {
 import { CardSkeleton } from '@/components/shared/Skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SectionHeading } from '@/components/shared/SectionHeading'
+import HeroSection from '@/components/shared/HeroSection'
+import AnimatedSection from '@/components/shared/AnimatedSection'
+import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
@@ -25,6 +28,8 @@ const ALL_CATEGORIES = [
   { value: 'all', label: '全部' },
   ...PROJECT_CATEGORIES,
 ] as const
+
+const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
 
 export default function ProjectsPage() {
   const [activeCategory, setActiveCategory] = useState('all')
@@ -65,26 +70,11 @@ export default function ProjectsPage() {
       )}
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-20 sm:py-28 px-4 overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.06]">
-          <div className="absolute top-10 left-10 w-40 h-40 border-2 border-white rotate-45" />
-          <div className="absolute top-32 right-20 w-24 h-24 border-2 border-white rotate-12" />
-          <div className="absolute bottom-20 left-1/4 w-32 h-32 border-2 border-white -rotate-12" />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 mb-6">
-            <Building2 className="w-4 h-4 text-gold" />
-            <span className="text-sm text-white/90">精选工程案例</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-            工程业绩
-          </h1>
-          <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed">
-            丰富的项目经验，涵盖医疗、教育、住房、产业园等多个领域
-          </p>
-        </div>
-      </section>
+      <HeroSection
+        title="工程案例"
+        subtitle="丰富的项目经验，涵盖医疗、教育、住房、产业园等多个领域"
+        badge={{ icon: Building2, text: '精选工程案例' }}
+      />
 
       {/* Category Filter */}
       <section className="sticky top-0 z-10 bg-white border-b border-border px-4 py-4 shadow-sm">
@@ -121,58 +111,61 @@ export default function ProjectsPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {loading
               ? [...Array(6)].map((_, i) => <CardSkeleton key={i} />)
-              : filteredProjects.map((project) => {
+              : filteredProjects.map((project, i) => {
               const colors = CATEGORY_COLORS[project.category] ?? {
                 bg: 'bg-gray-100',
-                text: 'text-gray-700',
+                text: 'text-text-secondary',
               }
               const categoryLabel =
                 CATEGORY_LABELS[project.category] ?? project.category
 
               return (
-                <Link
-                  key={project.id}
-                  to={`${ROUTES.PROJECTS}/${project.id}`}
-                  className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-2px]"
-                >
-                  {/* Image / Placeholder */}
-                  <div className="h-48 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center relative overflow-hidden">
-                    {project.coverImageUrl ? (
-                      <img
+                <AnimatedSection key={project.id} delay={STAGGER_DELAYS[i % 3]}>
+                  <Link
+                    to={`${ROUTES.PROJECTS}/${project.id}`}
+                    className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-2px] block"
+                  >
+                    {/* Image / Placeholder */}
+                    <div className="h-48 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center relative overflow-hidden">
+                      <ImageWithFallback
                         src={project.coverImageUrl}
                         alt={project.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        fallback={
+                          <div className="w-full h-full bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center">
+                            <Building2 className="w-12 h-12 text-navy/15" />
+                          </div>
+                        }
                       />
-                    ) : (
-                      <Building2 className="w-12 h-12 text-navy/15" />
-                    )}
-                    <span
-                      className={`absolute top-3 left-3 text-xs font-medium px-3 py-1 rounded-full ${colors.bg} ${colors.text}`}
-                    >
-                      {categoryLabel}
-                    </span>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-5">
-                    <h3 className="font-bold text-text-primary mb-3 leading-snug line-clamp-2 group-hover:text-navy transition-colors">
-                      {project.title}
-                    </h3>
-                    <div className="flex items-center gap-1.5 text-sm text-text-muted mb-2">
-                      <MapPin className="w-3.5 h-3.5 shrink-0" />
-                      {project.location}
-                    </div>
-                    <p className="text-sm text-text-secondary line-clamp-1">
-                      {project.scope}
-                    </p>
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <span className="inline-flex items-center gap-1 text-teal text-sm font-medium group-hover:gap-2 transition-all">
-                        查看详情
-                        <ArrowRight className="w-3.5 h-3.5" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-navy/20 to-transparent" />
+                      <span
+                        className={`absolute top-3 left-3 text-xs font-medium px-3 py-1 rounded-full ${colors.bg} ${colors.text}`}
+                      >
+                        {categoryLabel}
                       </span>
                     </div>
-                  </div>
-                </Link>
+
+                    {/* Content */}
+                    <div className="p-5">
+                      <h3 className="font-bold text-text-primary mb-3 leading-snug line-clamp-2 group-hover:text-navy transition-colors">
+                        {project.title}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-sm text-text-muted mb-2">
+                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                        {project.location}
+                      </div>
+                      <p className="text-sm text-text-secondary line-clamp-1">
+                        {project.scope}
+                      </p>
+                      <div className="mt-4 pt-4 border-t border-border">
+                        <span className="inline-flex items-center gap-1 text-teal text-sm font-medium group-hover:gap-2 transition-all">
+                          查看详情
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </AnimatedSection>
               )
             })}
           </div>
@@ -189,27 +182,23 @@ export default function ProjectsPage() {
       <section className="py-16 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="text-center p-6 rounded-xl bg-bg-gray">
-              <div className="w-12 h-12 bg-navy/10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <Briefcase className="w-6 h-6 text-navy" />
-              </div>
-              <div className="text-3xl font-bold text-navy mb-1">{projects.length}+</div>
-              <div className="text-sm text-text-secondary">完成项目</div>
-            </div>
-            <div className="text-center p-6 rounded-xl bg-bg-gray">
-              <div className="w-12 h-12 bg-teal/10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <Layers className="w-6 h-6 text-teal" />
-              </div>
-              <div className="text-3xl font-bold text-teal mb-1">6</div>
-              <div className="text-sm text-text-secondary">业务领域</div>
-            </div>
-            <div className="text-center p-6 rounded-xl bg-bg-gray">
-              <div className="w-12 h-12 bg-gold/10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <Navigation className="w-6 h-6 text-gold" />
-              </div>
-              <div className="text-3xl font-bold text-gold-dark mb-1">深圳</div>
-              <div className="text-sm text-text-secondary">主要服务区域</div>
-            </div>
+            {[
+              { icon: Briefcase, value: `${projects.length}+`, label: '完成项目', color: 'navy' as const },
+              { icon: Layers, value: '6', label: '业务领域', color: 'teal' as const },
+              { icon: Navigation, value: '深圳', label: '主要服务区域', color: 'gold' as const },
+            ].map((stat, i) => (
+              <AnimatedSection key={stat.label} variant="scale" delay={STAGGER_DELAYS[i]}>
+                <div className="text-center p-6 rounded-xl bg-bg-gray">
+                  <div className={`w-12 h-12 bg-${stat.color}/10 rounded-xl flex items-center justify-center mx-auto mb-3`}>
+                    <stat.icon className={`w-6 h-6 text-${stat.color}`} />
+                  </div>
+                  <div className={`text-3xl font-bold mb-1 ${stat.color === 'navy' ? 'text-navy' : stat.color === 'teal' ? 'text-teal' : 'text-gold-dark'}`}>
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-text-secondary">{stat.label}</div>
+                </div>
+              </AnimatedSection>
+            ))}
           </div>
         </div>
       </section>

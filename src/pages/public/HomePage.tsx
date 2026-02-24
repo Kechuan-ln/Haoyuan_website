@@ -13,6 +13,9 @@ import { getHomeContent } from '@/services/home-content.service'
 import { getIcon } from '@/config/icon-map'
 import { CATEGORY_LABELS } from '@/data/projects'
 import { SectionHeading } from '@/components/shared/SectionHeading'
+import AnimatedSection from '@/components/shared/AnimatedSection'
+import CTASection from '@/components/shared/CTASection'
+import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
 import type { Project } from '@/types/project'
 import type { Service } from '@/types/service'
 import type { HomeContent } from '@/types/home'
@@ -50,6 +53,8 @@ const DEFAULT_STATS: HomeContent['stats'] = [
   { value: '5+', label: '业务领域', iconName: 'Award' },
   { value: '2021', label: '成立年份', iconName: 'Calendar' },
 ]
+
+const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
 
 export default function HomePage() {
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([])
@@ -110,7 +115,7 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Hero Section */}
+      {/* Hero Section — custom building silhouette (not replaced by HeroSection) */}
       <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-24 sm:py-32 px-4 overflow-hidden">
         {/* Decorative geometric pattern */}
         <div className="absolute inset-0 opacity-[0.06]">
@@ -153,7 +158,7 @@ export default function HomePage() {
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               to={ROUTES.ABOUT}
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-white/50 px-8 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/70"
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-white/40 px-8 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/70"
             >
               了解我们
             </Link>
@@ -196,19 +201,18 @@ export default function HomePage() {
             subtitle="以质量、安全、进度三大维度构建全方位服务保障体系，让客户安心无忧"
           />
           <div className="grid sm:grid-cols-3 gap-8">
-            {threeNoWorries.map((item) => {
+            {threeNoWorries.map((item, i) => {
               const Icon = getIcon(item.iconName)
               return (
-                <div
-                  key={item.title}
-                  className="bg-white rounded-xl p-8 border-l-4 border-navy shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
-                >
-                  <div className="w-14 h-14 bg-navy/10 rounded-xl flex items-center justify-center mb-6">
-                    <Icon className="w-7 h-7 text-navy" />
+                <AnimatedSection key={item.title} delay={STAGGER_DELAYS[i]}>
+                  <div className="bg-white rounded-xl p-8 border-l-4 border-navy shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]">
+                    <div className="w-14 h-14 bg-navy/10 rounded-xl flex items-center justify-center mb-6">
+                      <Icon className="w-7 h-7 text-navy" />
+                    </div>
+                    <h3 className="text-xl font-bold text-navy mb-3">{item.title}</h3>
+                    <p className="text-text-secondary leading-relaxed">{item.description}</p>
                   </div>
-                  <h3 className="text-xl font-bold text-navy mb-3">{item.title}</h3>
-                  <p className="text-text-secondary leading-relaxed">{item.description}</p>
-                </div>
+                </AnimatedSection>
               )
             })}
           </div>
@@ -230,24 +234,25 @@ export default function HomePage() {
             </div>
           ) : homeServices.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {homeServices.map((service) => {
+              {homeServices.map((service, i) => {
                 const Icon = getIcon(service.iconName)
                 return (
-                  <Link
-                    key={service.id}
-                    to={`${ROUTES.SERVICES}/${service.id}`}
-                    className="group bg-white rounded-xl p-8 shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] border border-border"
-                  >
-                    <div className="w-14 h-14 bg-teal/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-teal/20 transition-colors">
-                      <Icon className="w-7 h-7 text-teal" />
-                    </div>
-                    <h3 className="text-xl font-bold text-navy mb-3">{service.title}</h3>
-                    <p className="text-text-secondary leading-relaxed mb-4">{service.description}</p>
-                    <span className="inline-flex items-center gap-1 text-teal text-sm font-medium group-hover:gap-2 transition-all">
-                      了解更多
-                      <ArrowRight className="w-4 h-4" />
-                    </span>
-                  </Link>
+                  <AnimatedSection key={service.id} delay={STAGGER_DELAYS[i % 5]}>
+                    <Link
+                      to={`${ROUTES.SERVICES}/${service.id}`}
+                      className="group bg-white rounded-xl p-8 shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] border border-border block"
+                    >
+                      <div className="w-14 h-14 bg-teal/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-teal/20 transition-colors">
+                        <Icon className="w-7 h-7 text-teal" />
+                      </div>
+                      <h3 className="text-xl font-bold text-navy mb-3">{service.title}</h3>
+                      <p className="text-text-secondary leading-relaxed mb-4">{service.description}</p>
+                      <span className="inline-flex items-center gap-1 text-teal text-sm font-medium group-hover:gap-2 transition-all">
+                        了解更多
+                        <ArrowRight className="w-4 h-4" />
+                      </span>
+                    </Link>
+                  </AnimatedSection>
                 )
               })}
             </div>
@@ -275,35 +280,38 @@ export default function HomePage() {
             </div>
           ) : featuredProjects.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredProjects.map((project) => {
+              {featuredProjects.map((project, i) => {
                 const categoryLabel = CATEGORY_LABELS[project.category] ?? project.category
                 return (
-                  <Link
-                    key={project.id}
-                    to={`${ROUTES.PROJECTS}/${project.id}`}
-                    className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
-                  >
-                    <div className="h-44 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center relative overflow-hidden">
-                      {project.coverImageUrl ? (
-                        <img
+                  <AnimatedSection key={project.id} delay={STAGGER_DELAYS[i % 5]}>
+                    <Link
+                      to={`${ROUTES.PROJECTS}/${project.id}`}
+                      className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] block"
+                    >
+                      <div className="h-44 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center relative overflow-hidden">
+                        <ImageWithFallback
                           src={project.coverImageUrl}
                           alt={project.title}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          fallback={
+                            <div className="w-full h-full bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center">
+                              <Building2 className="w-12 h-12 text-navy/20" />
+                            </div>
+                          }
                         />
-                      ) : (
-                        <Building2 className="w-12 h-12 text-navy/20" />
-                      )}
-                      <span className="absolute top-3 left-3 bg-teal text-white text-xs font-medium px-3 py-1 rounded-full">
-                        {categoryLabel}
-                      </span>
-                    </div>
-                    <div className="p-5">
-                      <h3 className="font-bold text-text-primary mb-2 leading-snug line-clamp-2 group-hover:text-navy transition-colors">
-                        {project.title}
-                      </h3>
-                      <p className="text-sm text-text-secondary">{project.scope}</p>
-                    </div>
-                  </Link>
+                        <div className="absolute inset-0 bg-gradient-to-t from-navy/20 to-transparent" />
+                        <span className="absolute top-3 left-3 bg-teal text-white text-xs font-medium px-3 py-1 rounded-full">
+                          {categoryLabel}
+                        </span>
+                      </div>
+                      <div className="p-5">
+                        <h3 className="font-bold text-text-primary mb-2 leading-snug line-clamp-2 group-hover:text-navy transition-colors">
+                          {project.title}
+                        </h3>
+                        <p className="text-sm text-text-secondary">{project.scope}</p>
+                      </div>
+                    </Link>
+                  </AnimatedSection>
                 )
               })}
             </div>
@@ -330,16 +338,18 @@ export default function HomePage() {
       <section className="bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-20 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat) => {
+            {stats.map((stat, i) => {
               const Icon = getIcon(stat.iconName)
               return (
-                <div key={stat.label} className="text-center">
-                  <div className="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <Icon className="w-7 h-7 text-gold" />
+                <AnimatedSection key={stat.label} variant="scale" delay={STAGGER_DELAYS[i]}>
+                  <div className="text-center">
+                    <div className="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                      <Icon className="w-7 h-7 text-gold" />
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-bold text-gold mb-2">{stat.value}</div>
+                    <div className="text-white/70 text-sm">{stat.label}</div>
                   </div>
-                  <div className="text-3xl sm:text-4xl font-bold text-gold mb-2">{stat.value}</div>
-                  <div className="text-white/70 text-sm">{stat.label}</div>
-                </div>
+                </AnimatedSection>
               )
             })}
           </div>
@@ -347,23 +357,12 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 sm:py-24 px-4 bg-bg-gray">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">
-            {COMPANY.fullSlogan}
-          </h2>
-          <p className="text-text-secondary mb-10 max-w-2xl mx-auto">
-            我们期待与您携手合作，以专业技术和优质服务，共同实现工程项目的卓越目标
-          </p>
-          <Link
-            to={ROUTES.CONTACT}
-            className="inline-flex items-center gap-2 rounded-lg bg-navy px-8 py-3.5 text-sm font-semibold text-white transition-all hover:bg-navy-dark hover:shadow-lg"
-          >
-            联系我们
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
+      <CTASection
+        variant="light-bg"
+        title={COMPANY.fullSlogan}
+        subtitle="我们期待与您携手合作，以专业技术和优质服务，共同实现工程项目的卓越目标"
+        primaryAction={{ label: '联系我们', href: ROUTES.CONTACT, icon: ArrowRight }}
+      />
     </div>
   )
 }

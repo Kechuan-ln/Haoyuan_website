@@ -9,7 +9,7 @@ export function EmptyState({ title, description, icon }: EmptyStateProps) {
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="text-6xl mb-4">{icon ?? '📭'}</div>
       <h3 className="text-xl font-semibold text-navy mb-2">{title}</h3>
-      <p className="text-gray-500">{description}</p>
+      <p className="text-text-muted">{description}</p>
     </div>
   )
 }
