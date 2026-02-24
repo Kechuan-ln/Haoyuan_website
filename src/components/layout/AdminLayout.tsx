@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   X,
+  BadgeCheck,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ROUTES } from '@/config/routes'
@@ -30,6 +31,7 @@ const ADMIN_NAV_ITEMS: SidebarItem[] = [
   { label: '团队管理', path: ROUTES.ADMIN_TEAM, icon: Users },
   { label: '关于管理', path: ROUTES.ADMIN_ABOUT, icon: Info },
   { label: '首页管理', path: ROUTES.ADMIN_HOME, icon: Home },
+  { label: '资质管理', path: ROUTES.ADMIN_QUALIFICATIONS, icon: BadgeCheck },
   { label: '招标管理', path: ROUTES.ADMIN_BIDS, icon: Gavel },
   { label: '供应商管理', path: ROUTES.ADMIN_VENDORS, icon: Truck, managerOnly: true },
   { label: '留言管理', path: ROUTES.ADMIN_CONTACTS, icon: MessageSquare },

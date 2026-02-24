@@ -9,6 +9,8 @@ import {
   Building2,
 } from 'lucide-react'
 import { COMPANY } from '@/config/constants'
+import { getSiteSettings } from '@/services/site-settings.service'
+import { submitContact } from '@/services/contacts.service'
 
 interface ContactForm {
   name: string
@@ -25,29 +27,6 @@ interface FormErrors {
   subject?: string
   message?: string
 }
-
-const CONTACT_INFO = [
-  {
-    icon: MapPin,
-    label: '公司地址',
-    value: COMPANY.address,
-  },
-  {
-    icon: Phone,
-    label: '联系电话',
-    value: COMPANY.phone,
-  },
-  {
-    icon: Mail,
-    label: '电子邮箱',
-    value: COMPANY.email,
-  },
-  {
-    icon: Clock,
-    label: '工作时间',
-    value: '周一至周五 9:00-18:00',
-  },
-]
 
 const INITIAL_FORM: ContactForm = {
   name: '',
@@ -154,6 +133,22 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  // Dynamic contact info from Firestore (falls back to COMPANY constants)
+  const [contactAddress, setContactAddress] = useState(COMPANY.address)
+  const [contactPhone, setContactPhone] = useState(COMPANY.phone)
+  const [contactEmail, setContactEmail] = useState(COMPANY.email)
+  const [contactHours, setContactHours] = useState('周一至周五 9:00-18:00')
+
+  useEffect(() => {
+    getSiteSettings().then((s) => {
+      if (!s) return
+      if (s.companyAddress) setContactAddress(s.companyAddress)
+      if (s.companyPhone) setContactPhone(s.companyPhone)
+      if (s.companyEmail) setContactEmail(s.companyEmail)
+      if (s.workingHours) setContactHours(s.workingHours)
+    }).catch(() => { /* fallback already set */ })
+  }, [])
+
   function validate(): FormErrors {
     const errs: FormErrors = {}
     if (!form.name.trim()) errs.name = '请输入您的姓名'
@@ -174,7 +169,7 @@ export default function ContactPage() {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) {
@@ -182,11 +177,14 @@ export default function ContactPage() {
       return
     }
     setSubmitting(true)
-    // Simulate submission delay
-    setTimeout(() => {
-      setSubmitting(false)
+    try {
+      await submitContact(form)
       setSubmitted(true)
-    }, 1000)
+    } catch (err) {
+      console.error('Failed to submit contact:', err)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function handleReset() {
@@ -220,7 +218,12 @@ export default function ContactPage() {
             <div className="space-y-8">
               {/* Contact Info Cards */}
               <div className="grid sm:grid-cols-2 gap-4">
-                {CONTACT_INFO.map((info) => (
+                {[
+                  { icon: MapPin, label: '公司地址', value: contactAddress },
+                  { icon: Phone, label: '联系电话', value: contactPhone },
+                  { icon: Mail, label: '电子邮箱', value: contactEmail },
+                  { icon: Clock, label: '工作时间', value: contactHours },
+                ].map((info) => (
                   <div
                     key={info.label}
                     className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-border"

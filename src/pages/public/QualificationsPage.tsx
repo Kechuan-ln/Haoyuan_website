@@ -1,9 +1,9 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Shield,
   Award,
   BadgeCheck,
-  FileCheck,
   CheckCircle,
   ArrowRight,
   Star,
@@ -11,77 +11,26 @@ import {
   Building2,
   Leaf,
   HardHat,
-  Heart,
-  Search,
 } from 'lucide-react'
 import { COMPANY } from '@/config/constants'
 import { ROUTES } from '@/config/routes'
+import { getQualifications } from '@/services/qualifications.service'
+import { getIcon } from '@/config/icon-map'
+import { CardSkeleton } from '@/components/shared/Skeleton'
+import { SectionHeading } from '@/components/shared/SectionHeading'
+import type { Qualification } from '@/types/qualification'
 
-const CERTIFICATIONS = [
-  {
-    title: '营业执照',
-    issuer: '深圳市市场监督管理局',
-    description: '广东全程创优建设技术有限公司，依法注册经营工程建设技术服务',
-    icon: FileCheck,
-    iconColor: 'text-navy',
-    iconBg: 'bg-navy/10',
-  },
-  {
-    title: '工程监理乙级资质',
-    issuer: '住房和城乡建设部',
-    description: '具备工程监理乙级资质，可承担相应规模的工程监理业务',
-    icon: Shield,
-    iconColor: 'text-teal',
-    iconBg: 'bg-teal/10',
-  },
-  {
-    title: 'ISO 9001 质量管理体系认证',
-    issuer: '国际标准化组织认证',
-    description: '建立完善的质量管理体系，确保服务品质持续稳定提升',
-    icon: BadgeCheck,
-    iconColor: 'text-navy',
-    iconBg: 'bg-navy/10',
-  },
-  {
-    title: 'ISO 14001 环境管理体系认证',
-    issuer: '国际标准化组织认证',
-    description: '践行绿色环保理念，规范环境管理，减少施工环境影响',
-    icon: Leaf,
-    iconColor: 'text-teal',
-    iconBg: 'bg-teal/10',
-  },
-  {
-    title: 'ISO 45001 职业健康安全管理体系认证',
-    issuer: '国际标准化组织认证',
-    description: '保障员工职业健康与安全，建立完善的安全管理制度',
-    icon: HardHat,
-    iconColor: 'text-gold-dark',
-    iconBg: 'bg-gold/10',
-  },
-  {
-    title: 'AAAA 级标准化工地认证',
-    issuer: '行业协会认证',
-    description: '施工现场标准化管理达到AAAA级标准，彰显文明施工水平',
-    icon: Star,
-    iconColor: 'text-gold-dark',
-    iconBg: 'bg-gold/10',
-  },
-  {
-    title: '售后服务认证',
-    issuer: '国家认证认可监督管理委员会',
-    description: '完善的售后服务体系，为客户提供持续的技术支持与服务保障',
-    icon: Heart,
-    iconColor: 'text-teal',
-    iconBg: 'bg-teal/10',
-  },
-  {
-    title: 'AAA 级信用等级证书',
-    issuer: '信用评级机构',
-    description: '企业信用等级达到AAA级最高标准，诚信经营获得权威认可',
-    icon: Award,
-    iconColor: 'text-navy',
-    iconBg: 'bg-navy/10',
-  },
+/* ---------- Default fallback content ---------- */
+
+const DEFAULT_QUALIFICATIONS: Omit<Qualification, 'id' | 'createdAt' | 'updatedAt'>[] = [
+  { title: '营业执照', issuer: '深圳市市场监督管理局', description: '广东全程创优建设技术有限公司，依法注册经营工程建设技术服务', iconName: 'FileCheck', colorTheme: 'navy', sortOrder: 0, isPublished: true },
+  { title: '工程监理乙级资质', issuer: '住房和城乡建设部', description: '具备工程监理乙级资质，可承担相应规模的工程监理业务', iconName: 'Shield', colorTheme: 'teal', sortOrder: 1, isPublished: true },
+  { title: 'ISO 9001 质量管理体系认证', issuer: '国际标准化组织认证', description: '建立完善的质量管理体系，确保服务品质持续稳定提升', iconName: 'BadgeCheck', colorTheme: 'navy', sortOrder: 2, isPublished: true },
+  { title: 'ISO 14001 环境管理体系认证', issuer: '国际标准化组织认证', description: '践行绿色环保理念，规范环境管理，减少施工环境影响', iconName: 'Leaf', colorTheme: 'teal', sortOrder: 3, isPublished: true },
+  { title: 'ISO 45001 职业健康安全管理体系认证', issuer: '国际标准化组织认证', description: '保障员工职业健康与安全，建立完善的安全管理制度', iconName: 'HardHat', colorTheme: 'gold', sortOrder: 4, isPublished: true },
+  { title: 'AAAA 级标准化工地认证', issuer: '行业协会认证', description: '施工现场标准化管理达到AAAA级标准，彰显文明施工水平', iconName: 'Star', colorTheme: 'gold', sortOrder: 5, isPublished: true },
+  { title: '售后服务认证', issuer: '国家认证认可监督管理委员会', description: '完善的售后服务体系，为客户提供持续的技术支持与服务保障', iconName: 'Heart', colorTheme: 'teal', sortOrder: 6, isPublished: true },
+  { title: 'AAA 级信用等级证书', issuer: '信用评级机构', description: '企业信用等级达到AAA级最高标准，诚信经营获得权威认可', iconName: 'Award', colorTheme: 'navy', sortOrder: 7, isPublished: true },
 ]
 
 const TRUST_STATS = [
@@ -91,7 +40,32 @@ const TRUST_STATS = [
   { value: 'AAAA', label: '标准化工地', icon: Star },
 ]
 
+function getColorClasses(theme: string) {
+  switch (theme) {
+    case 'teal': return { bg: 'bg-teal/10', text: 'text-teal' }
+    case 'gold': return { bg: 'bg-gold/10', text: 'text-gold-dark' }
+    default: return { bg: 'bg-navy/10', text: 'text-navy' }
+  }
+}
+
 export default function QualificationsPage() {
+  const [qualifications, setQualifications] = useState<Omit<Qualification, 'id' | 'createdAt' | 'updatedAt'>[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const data = await getQualifications({ isPublished: true })
+        setQualifications(data.length > 0 ? data : DEFAULT_QUALIFICATIONS)
+      } catch {
+        setQualifications(DEFAULT_QUALIFICATIONS)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
   return (
     <div>
       {/* Hero Banner */}
@@ -128,52 +102,43 @@ export default function QualificationsPage() {
       {/* Certifications Gallery */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">资质证书一览</h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              完善的资质认证体系，为优质服务提供坚实保障
-            </p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {CERTIFICATIONS.map((cert) => (
-              <div
-                key={cert.title}
-                className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-              >
-                {/* Certificate Image Placeholder */}
-                <div className="h-48 bg-gradient-to-br from-navy/5 to-navy/10 flex flex-col items-center justify-center relative">
-                  <div className={`w-16 h-16 ${cert.iconBg} rounded-xl flex items-center justify-center mb-3`}>
-                    <cert.icon className={`w-8 h-8 ${cert.iconColor}`} />
-                  </div>
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-navy/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="flex items-center gap-2 text-white text-sm font-medium">
-                      <Search className="w-4 h-4" />
-                      点击查看大图
+          <SectionHeading title="资质证书一览" subtitle="完善的资质认证体系，为优质服务提供坚实保障" />
+          {loading ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {qualifications.map((cert) => {
+                const Icon = getIcon(cert.iconName)
+                const colors = getColorClasses(cert.colorTheme)
+                return (
+                  <div
+                    key={cert.title}
+                    className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                  >
+                    <div className="h-48 bg-gradient-to-br from-navy/5 to-navy/10 flex flex-col items-center justify-center">
+                      <div className={`w-16 h-16 ${colors.bg} rounded-xl flex items-center justify-center mb-3`}>
+                        <Icon className={`w-8 h-8 ${colors.text}`} />
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-lg font-bold text-text-primary mb-1">{cert.title}</h3>
+                      <p className="text-sm text-teal font-medium mb-3">{cert.issuer}</p>
+                      <p className="text-sm text-text-secondary leading-relaxed">{cert.description}</p>
                     </div>
                   </div>
-                </div>
-                {/* Content */}
-                <div className="p-6">
-                  <h3 className="text-lg font-bold text-text-primary mb-1">{cert.title}</h3>
-                  <p className="text-sm text-teal font-medium mb-3">{cert.issuer}</p>
-                  <p className="text-sm text-text-secondary leading-relaxed">{cert.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 
       {/* ISO Triple System Highlight */}
       <section className="py-20 sm:py-24 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">ISO 三体系认证</h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              质量、环境、职业健康安全三大管理体系全面达标
-            </p>
-          </div>
+          <SectionHeading title="ISO 三体系认证" subtitle="质量、环境、职业健康安全三大管理体系全面达标" />
           <div className="grid sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="bg-white rounded-xl p-8 border-l-4 border-navy shadow-md text-center">
               <BadgeCheck className="w-12 h-12 text-navy mx-auto mb-4" />

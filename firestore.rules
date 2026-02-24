@@ -129,6 +129,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ─── Qualifications ────────────────────────────────────────────────
+
+    match /qualifications/{qualId} {
+      allow read: if isAdmin()
+        || (resource.data.isPublished == true);
+      allow create, update, delete: if isAdmin();
+    }
+
     // ─── Site Settings ─────────────────────────────────────────────────
 
     match /settings/{settingId} {

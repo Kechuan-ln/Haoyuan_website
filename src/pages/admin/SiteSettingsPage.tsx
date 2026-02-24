@@ -10,6 +10,7 @@ import {
   Phone,
   Mail,
   MapPin,
+  Clock,
   Loader2,
 } from 'lucide-react'
 import type { HeroSlide } from '@/types/contact'
@@ -25,6 +26,7 @@ interface SiteSettingsForm {
   companyEmail: string
   companyAddress: string
   companyDescription: string
+  workingHours: string
   heroSlides: HeroSlide[]
   siteTitle: string
   siteDescription: string
@@ -40,6 +42,7 @@ const DEFAULT_SETTINGS: SiteSettingsForm = {
   companyAddress: COMPANY.address,
   companyDescription:
     '广东全程创优建设技术有限公司是一家专注于工程造价咨询、招标代理、工程监理和项目管理的综合性工程咨询服务企业。公司秉承"全程创优 共创未来"的理念，致力于为客户提供专业、高效、优质的工程建设全过程咨询服务。',
+  workingHours: '周一至周五 9:00-18:00',
   heroSlides: [
     {
       imageUrl: '',
@@ -80,6 +83,7 @@ export default function SiteSettingsPage() {
             companyEmail: data.companyEmail || COMPANY.email,
             companyAddress: data.companyAddress || COMPANY.address,
             companyDescription: data.companyDescription || DEFAULT_SETTINGS.companyDescription,
+            workingHours: data.workingHours || DEFAULT_SETTINGS.workingHours,
             heroSlides: data.heroSlides?.length ? data.heroSlides : DEFAULT_SETTINGS.heroSlides,
             siteTitle: data.siteTitle || COMPANY.name,
             siteDescription: data.siteDescription || DEFAULT_SETTINGS.siteDescription,
@@ -144,6 +148,7 @@ export default function SiteSettingsPage() {
         companyEmail: settings.companyEmail,
         companyAddress: settings.companyAddress,
         companyDescription: settings.companyDescription,
+        workingHours: settings.workingHours,
         heroSlides: settings.heroSlides,
         siteTitle: settings.siteTitle,
         siteDescription: settings.siteDescription,
@@ -272,6 +277,24 @@ export default function SiteSettingsPage() {
               onChange={(e) => updateField('companyDescription', e.target.value)}
               className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-y"
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1.5">
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-text-muted" />
+                  工作时间
+                </span>
+              </label>
+              <input
+                type="text"
+                value={settings.workingHours}
+                onChange={(e) => updateField('workingHours', e.target.value)}
+                placeholder="如：周一至周五 9:00-18:00"
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors"
+              />
+            </div>
           </div>
         </div>
       </div>

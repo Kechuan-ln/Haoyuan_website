@@ -42,6 +42,7 @@ export const ROUTES = {
   ADMIN_TEAM: '/admin/team',
   ADMIN_ABOUT: '/admin/about',
   ADMIN_HOME: '/admin/home',
+  ADMIN_QUALIFICATIONS: '/admin/qualifications',
   ADMIN_USERS: '/admin/users',
   ADMIN_SETTINGS: '/admin/settings',
 } as const

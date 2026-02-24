@@ -19,6 +19,7 @@ export interface SiteSettings {
   companyEmail: string
   companyAddress: string
   companyDescription: string
+  workingHours?: string
   siteTitle: string
   siteDescription: string
   siteKeywords: string

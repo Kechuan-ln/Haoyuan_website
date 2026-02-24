@@ -51,6 +51,7 @@ const AboutContentPage = lazy(() => import('@/pages/admin/AboutContentPage'))
 const HomeContentPage = lazy(() => import('@/pages/admin/HomeContentPage'))
 const UserManagePage = lazy(() => import('@/pages/admin/UserManagePage'))
 const SiteSettingsPage = lazy(() => import('@/pages/admin/SiteSettingsPage'))
+const QualificationsManagePage = lazy(() => import('@/pages/admin/QualificationsManagePage'))
 
 // ---------- Special pages ----------
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
@@ -116,6 +117,7 @@ function App() {
               <Route path="admin/bids" element={<BidManagePage />} />
               <Route path="admin/bids/:id/evaluate" element={<ManagerGuard><BidEvaluationPage /></ManagerGuard>} />
               <Route path="admin/bids/:id/report" element={<ManagerGuard><EvaluationReportPage /></ManagerGuard>} />
+              <Route path="admin/qualifications" element={<QualificationsManagePage />} />
               <Route path="admin/contacts" element={<ContactManagePage />} />
               <Route path="admin/users" element={<ManagerGuard><UserManagePage /></ManagerGuard>} />
               <Route path="admin/settings" element={<ManagerGuard><SiteSettingsPage /></ManagerGuard>} />
