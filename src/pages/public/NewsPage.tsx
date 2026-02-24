@@ -123,7 +123,7 @@ export default function NewsPage() {
       <section className="py-12 sm:py-16 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
           {loading ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-5">
+            <div className="space-y-5">
               {[...Array(4)].map((_, i) => <CardSkeleton key={i} />)}
             </div>
           ) : articles.length === 0 ? (

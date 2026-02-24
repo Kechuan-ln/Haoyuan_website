@@ -53,16 +53,6 @@ export default function ProjectsPage() {
       ? projects
       : projects.filter((p) => p.category === activeCategory)
 
-  if (loading) {
-    return (
-      <div className="py-16 px-4">
-        <div className="max-w-7xl mx-auto grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => <CardSkeleton key={i} />)}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div>
       {/* Error Banner */}
@@ -120,12 +110,16 @@ export default function ProjectsPage() {
       <section className="py-16 sm:py-20 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
           {/* Results count */}
-          <p className="text-sm text-text-muted mb-8">
-            共 <span className="text-navy font-semibold">{filteredProjects.length}</span> 个项目
-          </p>
+          {!loading && (
+            <p className="text-sm text-text-muted mb-8">
+              共 <span className="text-navy font-semibold">{filteredProjects.length}</span> 个项目
+            </p>
+          )}
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => {
+            {loading
+              ? [...Array(6)].map((_, i) => <CardSkeleton key={i} />)
+              : filteredProjects.map((project) => {
               const colors = CATEGORY_COLORS[project.category] ?? {
                 bg: 'bg-gray-100',
                 text: 'text-gray-700',
@@ -181,8 +175,9 @@ export default function ProjectsPage() {
             })}
           </div>
 
+
           {/* Empty state */}
-          {filteredProjects.length === 0 && (
+          {!loading && filteredProjects.length === 0 && (
             <EmptyState title="暂无项目案例" description="项目信息正在整理中" />
           )}
         </div>
