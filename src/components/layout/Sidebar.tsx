@@ -8,6 +8,7 @@ export interface SidebarItem {
   label: string
   path: string
   icon: LucideIcon
+  managerOnly?: boolean
 }
 
 interface SidebarProps {

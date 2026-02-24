@@ -1,79 +1,106 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Building2,
-  Target,
-  Award,
-  Handshake,
-  Shield,
   ArrowRight,
   Lightbulb,
   Heart,
-  Leaf,
-  CheckCircle,
+  Loader2,
 } from 'lucide-react'
 import { COMPANY } from '@/config/constants'
 import { ROUTES } from '@/config/routes'
+import { getIcon } from '@/config/icon-map'
+import { getAboutContent } from '@/services/about-content.service'
+import type { AboutContent } from '@/types/about'
 
-const CORE_VALUES = [
-  {
-    title: '专精创新',
-    icon: Target,
-    color: 'text-navy',
-    bgColor: 'bg-navy/10',
-    description: '以专业技术为基础，持续创新服务模式，紧跟行业前沿发展，为客户提供最优解决方案。',
-  },
-  {
-    title: '品质为诺',
-    icon: Award,
-    color: 'text-gold-dark',
-    bgColor: 'bg-gold/10',
-    description: '坚守质量标准，以品质赢得信赖。每一个项目都以最高标准严格把控，绝不降低品质要求。',
-  },
-  {
-    title: '诚协共进',
-    icon: Handshake,
-    color: 'text-teal',
-    bgColor: 'bg-teal/10',
-    description: '秉承诚信原则，协同合作共同发展。与客户、合作伙伴建立长期互信的合作关系。',
-  },
-  {
-    title: '责任担当',
-    icon: Shield,
-    color: 'text-navy',
-    bgColor: 'bg-navy/10',
-    description: '对项目负责，对客户负责，对社会负责。将社会责任融入企业发展的每一个环节。',
-  },
-]
+/* ---------- Default Content (fallback when Firestore is empty) ---------- */
 
-const THREE_PROMISES = [
-  {
-    title: '文明工地典范',
-    icon: CheckCircle,
-    description: '严格施工管理，打造文明安全施工环境，做到施工现场整洁有序、安全防护到位。',
-    highlights: ['标准化施工流程', '安全文明管理', '环境保护措施'],
-  },
-  {
-    title: '结构品质标杆',
-    icon: Award,
-    description: '精益求精，确保工程结构质量达到行业标杆，每一道工序都经过严格检验验收。',
-    highlights: ['工序质量验收', '材料严格把关', '结构安全检测'],
-  },
-  {
-    title: '绿色建筑先锋',
-    icon: Leaf,
-    description: '践行绿色理念，推动可持续建设发展，积极采用环保材料和节能技术。',
-    highlights: ['环保材料应用', '节能技术推广', '绿色施工标准'],
-  },
-]
+const DEFAULT_CONTENT: Omit<AboutContent, 'updatedAt'> = {
+  coreValues: [
+    { title: '专精创新', iconName: 'Target', colorTheme: 'navy', description: '以专业技术为基础，持续创新服务模式，紧跟行业前沿发展，为客户提供最优解决方案。' },
+    { title: '品质为诺', iconName: 'Award', colorTheme: 'gold', description: '坚守质量标准，以品质赢得信赖。每一个项目都以最高标准严格把控，绝不降低品质要求。' },
+    { title: '诚协共进', iconName: 'Handshake', colorTheme: 'teal', description: '秉承诚信原则，协同合作共同发展。与客户、合作伙伴建立长期互信的合作关系。' },
+    { title: '责任担当', iconName: 'Shield', colorTheme: 'navy', description: '对项目负责，对客户负责，对社会负责。将社会责任融入企业发展的每一个环节。' },
+  ],
+  threePromises: [
+    {
+      title: '文明工地典范', iconName: 'CheckCircle',
+      description: '严格施工管理，打造文明安全施工环境，做到施工现场整洁有序、安全防护到位。',
+      highlights: ['标准化施工流程', '安全文明管理', '环境保护措施'],
+    },
+    {
+      title: '结构品质标杆', iconName: 'Award',
+      description: '精益求精，确保工程结构质量达到行业标杆，每一道工序都经过严格检验验收。',
+      highlights: ['工序质量验收', '材料严格把关', '结构安全检测'],
+    },
+    {
+      title: '绿色建筑先锋', iconName: 'Leaf',
+      description: '践行绿色理念，推动可持续建设发展，积极采用环保材料和节能技术。',
+      highlights: ['环保材料应用', '节能技术推广', '绿色施工标准'],
+    },
+  ],
+  milestones: [
+    { year: '2021', event: '公司在深圳市光明区注册成立' },
+    { year: '2022', event: '取得工程监理乙级资质，业务初具规模' },
+    { year: '2023', event: '通过ISO三体系认证，服务能力全面提升' },
+    { year: '2024', event: '获得AAA级信用等级，项目业绩突破50+' },
+  ],
+}
 
-const MILESTONES = [
-  { year: '2021', event: '公司在深圳市光明区注册成立' },
-  { year: '2022', event: '取得工程监理乙级资质，业务初具规模' },
-  { year: '2023', event: '通过ISO三体系认证，服务能力全面提升' },
-  { year: '2024', event: '获得AAA级信用等级，项目业绩突破50+' },
-]
+/* ---------- Helpers ---------- */
+
+function getColorClasses(theme: string) {
+  switch (theme) {
+    case 'navy':
+      return { text: 'text-navy', bgLight: 'bg-navy/10' }
+    case 'teal':
+      return { text: 'text-teal', bgLight: 'bg-teal/10' }
+    case 'gold':
+      return { text: 'text-gold-dark', bgLight: 'bg-gold/10' }
+    default:
+      return { text: 'text-navy', bgLight: 'bg-navy/10' }
+  }
+}
+
+/* ---------- Component ---------- */
 
 export default function AboutPage() {
+  const [content, setContent] = useState<Omit<AboutContent, 'updatedAt'> | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getAboutContent()
+        if (data) {
+          setContent({
+            coreValues: data.coreValues?.length ? data.coreValues : DEFAULT_CONTENT.coreValues,
+            threePromises: data.threePromises?.length ? data.threePromises : DEFAULT_CONTENT.threePromises,
+            milestones: data.milestones?.length ? data.milestones : DEFAULT_CONTENT.milestones,
+          })
+        } else {
+          setContent(DEFAULT_CONTENT)
+        }
+      } catch {
+        setContent(DEFAULT_CONTENT)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  if (loading || !content) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Loader2 className="w-10 h-10 text-navy animate-spin mb-4" />
+        <p className="text-sm text-text-secondary">加载中...</p>
+      </div>
+    )
+  }
+
+  const CheckCircleIcon = getIcon('CheckCircle')
+
   return (
     <div>
       {/* Hero Banner */}
@@ -146,7 +173,7 @@ export default function AboutPage() {
               {/* Timeline line */}
               <div className="absolute left-6 sm:left-8 top-0 bottom-0 w-0.5 bg-navy/20" />
               <div className="space-y-8">
-                {MILESTONES.map((m) => (
+                {content.milestones.map((m) => (
                   <div key={m.year} className="flex gap-6 items-start relative">
                     <div className="relative z-10 w-12 sm:w-16 h-12 sm:h-16 bg-navy rounded-xl flex items-center justify-center shrink-0">
                       <span className="text-white font-bold text-xs sm:text-sm">{m.year}</span>
@@ -172,18 +199,22 @@ export default function AboutPage() {
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {CORE_VALUES.map((value) => (
-              <div
-                key={value.title}
-                className="bg-white rounded-xl p-8 shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] border border-border"
-              >
-                <div className={`w-14 h-14 ${value.bgColor} rounded-xl flex items-center justify-center mb-6`}>
-                  <value.icon className={`w-7 h-7 ${value.color}`} />
+            {content.coreValues.map((value) => {
+              const Icon = getIcon(value.iconName)
+              const colors = getColorClasses(value.colorTheme)
+              return (
+                <div
+                  key={value.title}
+                  className="bg-white rounded-xl p-8 shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] border border-border"
+                >
+                  <div className={`w-14 h-14 ${colors.bgLight} rounded-xl flex items-center justify-center mb-6`}>
+                    <Icon className={`w-7 h-7 ${colors.text}`} />
+                  </div>
+                  <h3 className="text-xl font-bold text-navy mb-3">{value.title}</h3>
+                  <p className="text-text-secondary leading-relaxed text-sm">{value.description}</p>
                 </div>
-                <h3 className="text-xl font-bold text-navy mb-3">{value.title}</h3>
-                <p className="text-text-secondary leading-relaxed text-sm">{value.description}</p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
@@ -200,28 +231,31 @@ export default function AboutPage() {
             </p>
           </div>
           <div className="grid sm:grid-cols-3 gap-8">
-            {THREE_PROMISES.map((promise) => (
-              <div
-                key={promise.title}
-                className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
-              >
-                <div className="bg-gradient-to-r from-navy to-navy-dark p-6">
-                  <promise.icon className="w-10 h-10 text-gold mb-3" />
-                  <h3 className="text-xl font-bold text-white">{promise.title}</h3>
+            {content.threePromises.map((promise) => {
+              const PromiseIcon = getIcon(promise.iconName)
+              return (
+                <div
+                  key={promise.title}
+                  className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
+                >
+                  <div className="bg-gradient-to-r from-navy to-navy-dark p-6">
+                    <PromiseIcon className="w-10 h-10 text-gold mb-3" />
+                    <h3 className="text-xl font-bold text-white">{promise.title}</h3>
+                  </div>
+                  <div className="p-6">
+                    <p className="text-text-secondary leading-relaxed mb-4">{promise.description}</p>
+                    <ul className="space-y-2">
+                      {promise.highlights.map((h) => (
+                        <li key={h} className="flex items-center gap-2 text-sm text-text-secondary">
+                          <CheckCircleIcon className="w-4 h-4 text-teal shrink-0" />
+                          {h}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <div className="p-6">
-                  <p className="text-text-secondary leading-relaxed mb-4">{promise.description}</p>
-                  <ul className="space-y-2">
-                    {promise.highlights.map((h) => (
-                      <li key={h} className="flex items-center gap-2 text-sm text-text-secondary">
-                        <CheckCircle className="w-4 h-4 text-teal shrink-0" />
-                        {h}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>

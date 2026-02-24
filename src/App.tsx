@@ -5,6 +5,7 @@ import PublicLayout from '@/components/layout/PublicLayout'
 import AdminLayout from '@/components/layout/AdminLayout'
 import PortalLayout from '@/components/layout/PortalLayout'
 import ProtectedRoute from '@/components/shared/ProtectedRoute'
+import ManagerGuard from '@/components/shared/ManagerGuard'
 
 // ---------- Public pages ----------
 const HomePage = lazy(() => import('@/pages/public/HomePage'))
@@ -44,6 +45,10 @@ const BidManagePage = lazy(() => import('@/pages/admin/BidManagePage'))
 const BidEvaluationPage = lazy(() => import('@/pages/admin/BidEvaluationPage'))
 const EvaluationReportPage = lazy(() => import('@/pages/admin/EvaluationReportPage'))
 const ContactManagePage = lazy(() => import('@/pages/admin/ContactManagePage'))
+const ServiceManagePage = lazy(() => import('@/pages/admin/ServiceManagePage'))
+const TeamContentPage = lazy(() => import('@/pages/admin/TeamContentPage'))
+const AboutContentPage = lazy(() => import('@/pages/admin/AboutContentPage'))
+const HomeContentPage = lazy(() => import('@/pages/admin/HomeContentPage'))
 const UserManagePage = lazy(() => import('@/pages/admin/UserManagePage'))
 const SiteSettingsPage = lazy(() => import('@/pages/admin/SiteSettingsPage'))
 
@@ -103,13 +108,17 @@ function App() {
               <Route path="admin/articles/new" element={<ArticleEditorPage />} />
               <Route path="admin/articles/:id/edit" element={<ArticleEditorPage />} />
               <Route path="admin/projects" element={<ProjectManagePage />} />
-              <Route path="admin/vendors" element={<VendorManagePage />} />
+              <Route path="admin/services" element={<ServiceManagePage />} />
+              <Route path="admin/team" element={<TeamContentPage />} />
+              <Route path="admin/about" element={<AboutContentPage />} />
+              <Route path="admin/home" element={<HomeContentPage />} />
+              <Route path="admin/vendors" element={<ManagerGuard><VendorManagePage /></ManagerGuard>} />
               <Route path="admin/bids" element={<BidManagePage />} />
-              <Route path="admin/bids/:id/evaluate" element={<BidEvaluationPage />} />
-              <Route path="admin/bids/:id/report" element={<EvaluationReportPage />} />
+              <Route path="admin/bids/:id/evaluate" element={<ManagerGuard><BidEvaluationPage /></ManagerGuard>} />
+              <Route path="admin/bids/:id/report" element={<ManagerGuard><EvaluationReportPage /></ManagerGuard>} />
               <Route path="admin/contacts" element={<ContactManagePage />} />
-              <Route path="admin/users" element={<UserManagePage />} />
-              <Route path="admin/settings" element={<SiteSettingsPage />} />
+              <Route path="admin/users" element={<ManagerGuard><UserManagePage /></ManagerGuard>} />
+              <Route path="admin/settings" element={<ManagerGuard><SiteSettingsPage /></ManagerGuard>} />
             </Route>
           </Route>
 

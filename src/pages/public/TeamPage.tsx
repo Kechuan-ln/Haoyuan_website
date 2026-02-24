@@ -1,74 +1,73 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Target,
-  Settings,
-  GitBranch,
-  Users,
-  Briefcase,
-  BarChart3,
   Building2,
-  DollarSign,
-  FileText,
-  Shield,
   ArrowRight,
   CheckCircle,
-  Award,
-  Heart,
+  Loader2,
 } from 'lucide-react'
 import { COMPANY } from '@/config/constants'
 import { ROUTES } from '@/config/routes'
+import { getIcon } from '@/config/icon-map'
+import { getTeamContent } from '@/services/team-content.service'
+import type { TeamContent } from '@/types/team'
 
-const THREE_PILLARS = [
-  {
-    title: '战略决策组',
-    icon: Target,
-    color: 'bg-navy',
-    textColor: 'text-navy',
-    bgColor: 'bg-navy/10',
-    description: '公司战略规划与重大决策',
-    subItems: [
-      '企业发展战略规划',
-      '重大项目决策审批',
-      '资源统筹调配',
-      '风险管控决策',
-    ],
-  },
-  {
-    title: '职能管理中心',
-    icon: Settings,
-    color: 'bg-teal',
-    textColor: 'text-teal',
-    bgColor: 'bg-teal/10',
-    description: '人力资源、财务、行政、市场等职能管理',
-    subItems: [
-      '人力资源管理',
-      '财务核算与资金管理',
-      '行政综合管理',
-      '市场开拓与品牌建设',
-    ],
-  },
-  {
-    title: '项目执行矩阵',
-    icon: GitBranch,
-    color: 'bg-gold-dark',
-    textColor: 'text-gold-dark',
-    bgColor: 'bg-gold/10',
-    description: '项目团队矩阵式管理，灵活配置资源',
-    subItems: [
-      '项目经理负责制',
-      '专业技术团队组建',
-      '跨部门资源协调',
-      '项目绩效考核评估',
-    ],
-  },
-]
+/* ---------- Default Content (fallback when Firestore is empty) ---------- */
 
-const RACI_DATA = [
+const DEFAULT_CONTENT: Omit<TeamContent, 'updatedAt'> = {
+  pillars: [
+    {
+      title: '战略决策组',
+      iconName: 'Target',
+      colorTheme: 'navy',
+      description: '公司战略规划与重大决策',
+      subItems: ['企业发展战略规划', '重大项目决策审批', '资源统筹调配', '风险管控决策'],
+    },
+    {
+      title: '职能管理中心',
+      iconName: 'Settings',
+      colorTheme: 'teal',
+      description: '人力资源、财务、行政、市场等职能管理',
+      subItems: ['人力资源管理', '财务核算与资金管理', '行政综合管理', '市场开拓与品牌建设'],
+    },
+    {
+      title: '项目执行矩阵',
+      iconName: 'GitBranch',
+      colorTheme: 'gold',
+      description: '项目团队矩阵式管理，灵活配置资源',
+      subItems: ['项目经理负责制', '专业技术团队组建', '跨部门资源协调', '项目绩效考核评估'],
+    },
+  ],
+  departments: [
+    { iconName: 'DollarSign', name: '造价咨询部' },
+    { iconName: 'FileText', name: '招标代理部' },
+    { iconName: 'Shield', name: '工程监理部' },
+    { iconName: 'Briefcase', name: '项目管理部' },
+    { iconName: 'BarChart3', name: '技术咨询部' },
+    { iconName: 'Building2', name: '综合管理部' },
+  ],
+  raciMatrix: [
+    { task: '项目立项审批', strategy: 'A', function: 'C', project: 'R' },
+    { task: '技术方案编制', strategy: 'I', function: 'C', project: 'R' },
+    { task: '质量安全管控', strategy: 'I', function: 'A', project: 'R' },
+    { task: '进度协调管理', strategy: 'I', function: 'C', project: 'R' },
+    { task: '成本预算控制', strategy: 'A', function: 'R', project: 'C' },
+    { task: '人员调配安排', strategy: 'I', function: 'R', project: 'C' },
+  ],
+  strengths: [
+    { iconName: 'Users', title: '专业团队', description: '拥有一支由注册监理工程师、造价工程师、一级建造师等组成的专业技术团队' },
+    { iconName: 'Award', title: '经验丰富', description: '团队成员平均拥有10年以上工程建设行业从业经验' },
+    { iconName: 'Heart', title: '团队协作', description: '矩阵式管理模式确保各专业协同配合，高效交付' },
+  ],
+}
+
+/* ---------- RACI Legend (static, universal definitions) ---------- */
+
+const RACI_LEGEND = [
   {
     letter: 'R',
     label: 'Responsible',
     chinese: '执行',
-    description: '谁来执行',
     detail: '负责具体工作任务的执行，确保工作按要求完成',
     color: 'bg-teal',
     textColor: 'text-teal',
@@ -78,7 +77,6 @@ const RACI_DATA = [
     letter: 'A',
     label: 'Accountable',
     chinese: '负责',
-    description: '谁来负责',
     detail: '对任务最终结果负责，拥有审批和决策权',
     color: 'bg-navy',
     textColor: 'text-navy',
@@ -88,7 +86,6 @@ const RACI_DATA = [
     letter: 'C',
     label: 'Consulted',
     chinese: '咨询',
-    description: '谁被咨询',
     detail: '在执行前需要征询意见的专家或相关方',
     color: 'bg-gold-dark',
     textColor: 'text-gold-dark',
@@ -98,7 +95,6 @@ const RACI_DATA = [
     letter: 'I',
     label: 'Informed',
     chinese: '知会',
-    description: '谁被通知',
     detail: '需要被告知进展和结果的相关方',
     color: 'bg-text-secondary',
     textColor: 'text-text-secondary',
@@ -106,59 +102,20 @@ const RACI_DATA = [
   },
 ]
 
-const RACI_MATRIX = [
-  {
-    task: '项目立项审批',
-    roles: { strategy: 'A', function: 'C', project: 'R' },
-  },
-  {
-    task: '技术方案编制',
-    roles: { strategy: 'I', function: 'C', project: 'R' },
-  },
-  {
-    task: '质量安全管控',
-    roles: { strategy: 'I', function: 'A', project: 'R' },
-  },
-  {
-    task: '进度协调管理',
-    roles: { strategy: 'I', function: 'C', project: 'R' },
-  },
-  {
-    task: '成本预算控制',
-    roles: { strategy: 'A', function: 'R', project: 'C' },
-  },
-  {
-    task: '人员调配安排',
-    roles: { strategy: 'I', function: 'R', project: 'C' },
-  },
-]
+/* ---------- Helpers ---------- */
 
-const TEAM_STRENGTHS = [
-  {
-    icon: Users,
-    title: '专业团队',
-    description: '拥有一支由注册监理工程师、造价工程师、一级建造师等组成的专业技术团队',
-  },
-  {
-    icon: Award,
-    title: '经验丰富',
-    description: '团队成员平均拥有10年以上工程建设行业从业经验',
-  },
-  {
-    icon: Heart,
-    title: '团队协作',
-    description: '矩阵式管理模式确保各专业协同配合，高效交付',
-  },
-]
-
-const DEPARTMENTS = [
-  { icon: DollarSign, name: '造价咨询部' },
-  { icon: FileText, name: '招标代理部' },
-  { icon: Shield, name: '工程监理部' },
-  { icon: Briefcase, name: '项目管理部' },
-  { icon: BarChart3, name: '技术咨询部' },
-  { icon: Building2, name: '综合管理部' },
-]
+function getColorClasses(theme: string) {
+  switch (theme) {
+    case 'navy':
+      return { bg: 'bg-navy', text: 'text-navy', bgLight: 'bg-navy/10' }
+    case 'teal':
+      return { bg: 'bg-teal', text: 'text-teal', bgLight: 'bg-teal/10' }
+    case 'gold':
+      return { bg: 'bg-gold-dark', text: 'text-gold-dark', bgLight: 'bg-gold/10' }
+    default:
+      return { bg: 'bg-navy', text: 'text-navy', bgLight: 'bg-navy/10' }
+  }
+}
 
 function getRaciColor(value: string): string {
   switch (value) {
@@ -170,7 +127,42 @@ function getRaciColor(value: string): string {
   }
 }
 
+/* ---------- Component ---------- */
+
 export default function TeamPage() {
+  const [content, setContent] = useState<Omit<TeamContent, 'updatedAt'>>(DEFAULT_CONTENT)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getTeamContent()
+        if (data) {
+          setContent({
+            pillars: data.pillars?.length ? data.pillars : DEFAULT_CONTENT.pillars,
+            departments: data.departments?.length ? data.departments : DEFAULT_CONTENT.departments,
+            raciMatrix: data.raciMatrix?.length ? data.raciMatrix : DEFAULT_CONTENT.raciMatrix,
+            strengths: data.strengths?.length ? data.strengths : DEFAULT_CONTENT.strengths,
+          })
+        }
+      } catch {
+        // Keep defaults on error
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32">
+        <Loader2 className="w-8 h-8 text-navy animate-spin mb-4" />
+        <p className="text-sm text-text-secondary">加载中...</p>
+      </div>
+    )
+  }
+
   return (
     <div>
       {/* Hero Banner */}
@@ -226,43 +218,50 @@ export default function TeamPage() {
 
           {/* Three Pillar Cards */}
           <div className="grid sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {THREE_PILLARS.map((pillar) => (
-              <div
-                key={pillar.title}
-                className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
-              >
-                <div className={`${pillar.color} p-5`}>
-                  <pillar.icon className="w-8 h-8 text-white mb-2" />
-                  <h3 className="text-lg font-bold text-white">{pillar.title}</h3>
-                  <p className="text-white/80 text-sm mt-1">{pillar.description}</p>
+            {content.pillars.map((pillar) => {
+              const PillarIcon = getIcon(pillar.iconName)
+              const colors = getColorClasses(pillar.colorTheme)
+              return (
+                <div
+                  key={pillar.title}
+                  className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
+                >
+                  <div className={`${colors.bg} p-5`}>
+                    <PillarIcon className="w-8 h-8 text-white mb-2" />
+                    <h3 className="text-lg font-bold text-white">{pillar.title}</h3>
+                    <p className="text-white/80 text-sm mt-1">{pillar.description}</p>
+                  </div>
+                  <div className="p-5">
+                    <ul className="space-y-3">
+                      {pillar.subItems.map((item) => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-text-secondary">
+                          <CheckCircle className={`w-4 h-4 ${colors.text} shrink-0 mt-0.5`} />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <div className="p-5">
-                  <ul className="space-y-3">
-                    {pillar.subItems.map((item) => (
-                      <li key={item} className="flex items-start gap-2 text-sm text-text-secondary">
-                        <CheckCircle className={`w-4 h-4 ${pillar.textColor} shrink-0 mt-0.5`} />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Department Grid */}
           <div className="mt-14 max-w-4xl mx-auto">
             <h3 className="text-xl font-bold text-navy text-center mb-6">职能部门设置</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {DEPARTMENTS.map((dept) => (
-                <div
-                  key={dept.name}
-                  className="bg-white rounded-xl p-4 text-center shadow-sm hover:shadow-md transition-shadow border border-border"
-                >
-                  <dept.icon className="w-6 h-6 text-teal mx-auto mb-2" />
-                  <span className="text-sm font-medium text-text-primary">{dept.name}</span>
-                </div>
-              ))}
+              {content.departments.map((dept) => {
+                const DeptIcon = getIcon(dept.iconName)
+                return (
+                  <div
+                    key={dept.name}
+                    className="bg-white rounded-xl p-4 text-center shadow-sm hover:shadow-md transition-shadow border border-border"
+                  >
+                    <DeptIcon className="w-6 h-6 text-teal mx-auto mb-2" />
+                    <span className="text-sm font-medium text-text-primary">{dept.name}</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -280,7 +279,7 @@ export default function TeamPage() {
 
           {/* RACI Legend */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto mb-12">
-            {RACI_DATA.map((item) => (
+            {RACI_LEGEND.map((item) => (
               <div
                 key={item.letter}
                 className={`rounded-xl p-5 border-l-4 ${item.borderColor} bg-white shadow-md`}
@@ -312,25 +311,25 @@ export default function TeamPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {RACI_MATRIX.map((row, idx) => (
+                  {content.raciMatrix.map((row, idx) => (
                     <tr
                       key={row.task}
                       className={idx % 2 === 0 ? 'bg-white' : 'bg-bg-gray'}
                     >
                       <td className="px-6 py-4 text-sm font-medium text-text-primary">{row.task}</td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${getRaciColor(row.roles.strategy)}`}>
-                          {row.roles.strategy}
+                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${getRaciColor(row.strategy)}`}>
+                          {row.strategy}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${getRaciColor(row.roles.function)}`}>
-                          {row.roles.function}
+                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${getRaciColor(row.function)}`}>
+                          {row.function}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${getRaciColor(row.roles.project)}`}>
-                          {row.roles.project}
+                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${getRaciColor(row.project)}`}>
+                          {row.project}
                         </span>
                       </td>
                     </tr>
@@ -358,18 +357,21 @@ export default function TeamPage() {
             </p>
           </div>
           <div className="grid sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {TEAM_STRENGTHS.map((strength) => (
-              <div
-                key={strength.title}
-                className="bg-white rounded-xl p-8 text-center shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
-              >
-                <div className="w-16 h-16 bg-navy/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <strength.icon className="w-8 h-8 text-navy" />
+            {content.strengths.map((strength) => {
+              const StrengthIcon = getIcon(strength.iconName)
+              return (
+                <div
+                  key={strength.title}
+                  className="bg-white rounded-xl p-8 text-center shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
+                >
+                  <div className="w-16 h-16 bg-navy/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <StrengthIcon className="w-8 h-8 text-navy" />
+                  </div>
+                  <h3 className="text-xl font-bold text-navy mb-3">{strength.title}</h3>
+                  <p className="text-text-secondary leading-relaxed text-sm">{strength.description}</p>
                 </div>
-                <h3 className="text-xl font-bold text-navy mb-3">{strength.title}</h3>
-                <p className="text-text-secondary leading-relaxed text-sm">{strength.description}</p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>

@@ -1,27 +1,60 @@
+import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
-  ArrowRight,
   Building2,
   Camera,
   ChevronRight,
   Clipboard,
   Home,
+  Loader2,
   MapPin,
   Tag,
 } from 'lucide-react'
 import {
-  getProjectById,
-  getProjectsByCategory,
   CATEGORY_COLORS,
   CATEGORY_LABELS,
-  PROJECTS_DATA,
 } from '@/data/projects'
 import { ROUTES } from '@/config/routes'
+import { getProject, getProjects } from '@/services/projects.service'
+import type { Project } from '@/types/project'
 
 export default function ProjectDetailPage() {
   const { id } = useParams()
-  const project = id ? getProjectById(id) : undefined
+  const [project, setProject] = useState<Project | null>(null)
+  const [relatedProjects, setRelatedProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!id) return
+      setLoading(true)
+      try {
+        const data = await getProject(id)
+        setProject(data)
+
+        if (data) {
+          const related = await getProjects({ category: data.category, isPublished: true })
+          setRelatedProjects(related.filter((p) => p.id !== data.id).slice(0, 3))
+        }
+      } catch (err) {
+        console.error('Failed to fetch project:', err)
+        setProject(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="w-8 h-8 text-navy animate-spin" />
+        <span className="ml-3 text-text-secondary">加载项目数据...</span>
+      </div>
+    )
+  }
 
   if (!project) {
     return (
@@ -49,18 +82,9 @@ export default function ProjectDetailPage() {
   }
   const categoryLabel = CATEGORY_LABELS[project.category] ?? project.category
 
-  // Related projects from same category, excluding current
-  const relatedProjects = getProjectsByCategory(project.category)
-    .filter((p) => p.id !== project.id)
-    .slice(0, 3)
-
-  // Navigation to next/prev project in full list
-  const currentIndex = PROJECTS_DATA.findIndex((p) => p.id === project.id)
-  const prevProject = currentIndex > 0 ? PROJECTS_DATA[currentIndex - 1] : undefined
-  const nextProject =
-    currentIndex < PROJECTS_DATA.length - 1
-      ? PROJECTS_DATA[currentIndex + 1]
-      : undefined
+  const galleryImages = project.galleryImageUrls?.length
+    ? project.galleryImageUrls
+    : []
 
   return (
     <div>
@@ -158,22 +182,49 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
 
-              {/* Image Gallery Placeholder */}
+              {/* Description */}
+              {project.description && (
+                <div className="mb-10">
+                  <h2 className="text-xl font-bold text-navy mb-4">项目描述</h2>
+                  <p className="text-text-secondary leading-relaxed">
+                    {project.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Image Gallery */}
               <div className="mb-10">
                 <h2 className="text-xl font-bold text-navy mb-6">项目图片</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-[4/3] bg-bg-gray rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-border"
-                    >
-                      <Camera className="w-8 h-8 text-text-muted/30 mb-2" />
-                      <span className="text-xs text-text-muted/50">
-                        项目图片
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {galleryImages.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {galleryImages.map((url, i) => (
+                      <div
+                        key={i}
+                        className="aspect-[4/3] rounded-xl overflow-hidden border border-border"
+                      >
+                        <img
+                          src={url}
+                          alt={`${project.title} - 图片 ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="aspect-[4/3] bg-bg-gray rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-border"
+                      >
+                        <Camera className="w-8 h-8 text-text-muted/30 mb-2" />
+                        <span className="text-xs text-text-muted/50">
+                          项目图片
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -218,49 +269,15 @@ export default function ProjectDetailPage() {
         </div>
       </section>
 
-      {/* Navigation between projects */}
+      {/* Simple back navigation */}
       <section className="border-t border-border py-8 px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {prevProject ? (
-            <Link
-              to={`${ROUTES.PROJECTS}/${prevProject.id}`}
-              className="inline-flex items-center gap-2 text-text-secondary hover:text-navy transition-colors group max-w-[40%]"
-            >
-              <ArrowLeft className="w-4 h-4 shrink-0 group-hover:-translate-x-1 transition-transform" />
-              <div className="text-left min-w-0">
-                <div className="text-xs text-text-muted">上一个项目</div>
-                <div className="text-sm font-medium truncate">
-                  {prevProject.title}
-                </div>
-              </div>
-            </Link>
-          ) : (
-            <div />
-          )}
-
+        <div className="max-w-7xl mx-auto flex items-center justify-center">
           <Link
             to={ROUTES.PROJECTS}
-            className="text-sm text-text-muted hover:text-navy transition-colors shrink-0"
+            className="text-sm text-text-muted hover:text-navy transition-colors"
           >
             全部项目
           </Link>
-
-          {nextProject ? (
-            <Link
-              to={`${ROUTES.PROJECTS}/${nextProject.id}`}
-              className="inline-flex items-center gap-2 text-text-secondary hover:text-navy transition-colors group max-w-[40%]"
-            >
-              <div className="text-right min-w-0">
-                <div className="text-xs text-text-muted">下一个项目</div>
-                <div className="text-sm font-medium truncate">
-                  {nextProject.title}
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 shrink-0 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          ) : (
-            <div />
-          )}
         </div>
       </section>
     </div>

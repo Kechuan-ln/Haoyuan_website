@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Building2,
@@ -7,14 +7,17 @@ import {
   Briefcase,
   Layers,
   Navigation,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
 import {
-  PROJECTS_DATA,
   CATEGORY_COLORS,
   CATEGORY_LABELS,
 } from '@/data/projects'
 import { PROJECT_CATEGORIES } from '@/config/constants'
 import { ROUTES } from '@/config/routes'
+import { getProjects } from '@/services/projects.service'
+import type { Project } from '@/types/project'
 
 const ALL_CATEGORIES = [
   { value: 'all', label: '全部' },
@@ -23,14 +26,51 @@ const ALL_CATEGORIES = [
 
 export default function ProjectsPage() {
   const [activeCategory, setActiveCategory] = useState('all')
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchProjects() {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await getProjects({ isPublished: true })
+        setProjects(data)
+      } catch (err) {
+        console.error('Failed to fetch projects:', err)
+        setError('加载项目数据失败，请稍后重试')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchProjects()
+  }, [])
 
   const filteredProjects =
     activeCategory === 'all'
-      ? PROJECTS_DATA
-      : PROJECTS_DATA.filter((p) => p.category === activeCategory)
+      ? projects
+      : projects.filter((p) => p.category === activeCategory)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="w-8 h-8 text-navy animate-spin" />
+        <span className="ml-3 text-text-secondary">加载项目数据...</span>
+      </div>
+    )
+  }
 
   return (
     <div>
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <span className="flex-1">{error}</span>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-20 sm:py-28 px-4 overflow-hidden">
         <div className="absolute inset-0 opacity-[0.06]">
@@ -97,9 +137,17 @@ export default function ProjectsPage() {
                   to={`${ROUTES.PROJECTS}/${project.id}`}
                   className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-2px]"
                 >
-                  {/* Image Placeholder */}
-                  <div className="h-48 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center relative">
-                    <Building2 className="w-12 h-12 text-navy/15" />
+                  {/* Image / Placeholder */}
+                  <div className="h-48 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center relative overflow-hidden">
+                    {project.coverImageUrl ? (
+                      <img
+                        src={project.coverImageUrl}
+                        alt={project.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Building2 className="w-12 h-12 text-navy/15" />
+                    )}
                     <span
                       className={`absolute top-3 left-3 text-xs font-medium px-3 py-1 rounded-full ${colors.bg} ${colors.text}`}
                     >
@@ -151,7 +199,7 @@ export default function ProjectsPage() {
               <div className="w-12 h-12 bg-navy/10 rounded-xl flex items-center justify-center mx-auto mb-3">
                 <Briefcase className="w-6 h-6 text-navy" />
               </div>
-              <div className="text-3xl font-bold text-navy mb-1">13+</div>
+              <div className="text-3xl font-bold text-navy mb-1">{projects.length}+</div>
               <div className="text-sm text-text-secondary">完成项目</div>
             </div>
             <div className="text-center p-6 rounded-xl bg-bg-gray">

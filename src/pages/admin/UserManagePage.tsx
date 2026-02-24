@@ -13,9 +13,11 @@ import {
   Loader2,
   AlertCircle,
 } from 'lucide-react'
-import type { UserRole, VendorStatus } from '@/types/user'
+import type { AdminLevel, UserRole, VendorStatus } from '@/types/user'
 import type { AppUser } from '@/types/user'
-import { listUsers, approveVendor, rejectVendor } from '@/services/users.service'
+import { useAuth } from '@/contexts/AuthContext'
+import { listUsers, approveVendor, rejectVendor, updateUserAdminLevel } from '@/services/users.service'
+import { ADMIN_LEVELS } from '@/config/constants'
 
 /* ---------- Constants ---------- */
 
@@ -71,6 +73,7 @@ function formatTimestamp(ts: unknown): string {
 /* ---------- Component ---------- */
 
 export default function UserManagePage() {
+  const { isManager } = useAuth()
   const [users, setUsers] = useState<AppUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -153,6 +156,19 @@ export default function UserManagePage() {
 
   function handleToggleDisabled() {
     alert('功能开发中')
+  }
+
+  async function handleAdminLevelChange(uid: string, newLevel: AdminLevel) {
+    try {
+      await updateUserAdminLevel(uid, newLevel)
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.uid === uid ? { ...u, adminLevel: newLevel } : u,
+        ),
+      )
+    } catch (err) {
+      alert('更新管理员级别失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
   }
 
   function handleToggleExpand(uid: string) {
@@ -330,11 +346,18 @@ export default function UserManagePage() {
                         <span className="text-sm text-text-secondary">{user.phone}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex text-xs font-medium px-2.5 py-1 rounded-full ${roleBadge.className}`}
-                        >
-                          {roleBadge.label}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`inline-flex text-xs font-medium px-2.5 py-1 rounded-full ${roleBadge.className}`}
+                          >
+                            {roleBadge.label}
+                          </span>
+                          {user.role === 'admin' && (
+                            <span className="inline-flex text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                              {ADMIN_LEVELS.find((l) => l.value === (user.adminLevel ?? 'manager'))?.label ?? '经理'}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         {vendorStatus ? (
@@ -393,6 +416,22 @@ export default function UserManagePage() {
                               )}
                               详情
                             </button>
+                          )}
+
+                          {/* Admin level toggle (manager only) */}
+                          {isManager && user.role === 'admin' && (
+                            <select
+                              value={user.adminLevel ?? 'manager'}
+                              onChange={(e) => handleAdminLevelChange(user.uid, e.target.value as AdminLevel)}
+                              className="rounded-md border border-border px-2 py-1 text-xs font-medium text-navy bg-white focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors"
+                              title="更改管理员级别"
+                            >
+                              {ADMIN_LEVELS.map((level) => (
+                                <option key={level.value} value={level.value}>
+                                  {level.label}
+                                </option>
+                              ))}
+                            </select>
                           )}
 
                           {/* Disable / Enable toggle (placeholder) */}

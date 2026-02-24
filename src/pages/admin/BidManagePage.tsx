@@ -86,7 +86,7 @@ function toDatetimeLocal(ts: Timestamp): string {
 /* ---------- Component ---------- */
 
 export default function BidManagePage() {
-  const { user } = useAuth()
+  const { user, isManager } = useAuth()
 
   // Data
   const [bids, setBids] = useState<Bid[]>([])
@@ -673,8 +673,8 @@ export default function BidManagePage() {
                           <Edit2 className="w-4 h-4" />
                         </button>
 
-                        {/* Status action button */}
-                        {action && (
+                        {/* Status action button (hide evaluating transition for workers) */}
+                        {action && !(action.next === 'evaluating' && !isManager) && (
                           <button
                             onClick={() => handleStatusChange(bid.id, action.next)}
                             className="px-2 py-1 text-xs font-medium text-white bg-gold hover:bg-gold/90 rounded transition-colors"
@@ -684,8 +684,8 @@ export default function BidManagePage() {
                           </button>
                         )}
 
-                        {/* Evaluate link for evaluating/awarded */}
-                        {(bid.status === 'evaluating' || bid.status === 'awarded') && (
+                        {/* Evaluate link for evaluating/awarded (manager only) */}
+                        {isManager && (bid.status === 'evaluating' || bid.status === 'awarded') && (
                           <a
                             href={`/admin/bids/${bid.id}/evaluate`}
                             className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-teal hover:text-teal/80 hover:bg-teal/10 rounded transition-colors"
@@ -767,7 +767,7 @@ export default function BidManagePage() {
                     <Edit2 className="w-4 h-4" />
                   </button>
 
-                  {action && (
+                  {action && !(action.next === 'evaluating' && !isManager) && (
                     <button
                       onClick={() => handleStatusChange(bid.id, action.next)}
                       className="px-2 py-1 text-xs font-medium text-white bg-gold hover:bg-gold/90 rounded transition-colors"
@@ -776,7 +776,7 @@ export default function BidManagePage() {
                     </button>
                   )}
 
-                  {(bid.status === 'evaluating' || bid.status === 'awarded') && (
+                  {isManager && (bid.status === 'evaluating' || bid.status === 'awarded') && (
                     <a
                       href={`/admin/bids/${bid.id}/evaluate`}
                       className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-teal hover:bg-teal/10 rounded transition-colors"

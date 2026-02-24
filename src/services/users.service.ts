@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore'
 import type { UpdateData } from 'firebase/firestore'
 import { requireDb } from '@/config/firebase'
-import type { AppUser, VendorStatus } from '@/types/user'
+import type { AdminLevel, AppUser, VendorStatus } from '@/types/user'
 
 const USERS = 'users'
 
@@ -58,6 +58,11 @@ export async function rejectVendor(uid: string): Promise<void> {
     'vendorProfile.status': 'rejected',
     updatedAt: serverTimestamp(),
   })
+}
+
+export async function updateUserAdminLevel(uid: string, adminLevel: AdminLevel): Promise<void> {
+  const db = requireDb()
+  await updateDoc(doc(db, USERS, uid), { adminLevel, updatedAt: serverTimestamp() })
 }
 
 export async function listUsers(role?: string): Promise<AppUser[]> {

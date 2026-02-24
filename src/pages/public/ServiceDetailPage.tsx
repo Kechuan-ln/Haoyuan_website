@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -6,13 +7,46 @@ import {
   ChevronRight,
   Home,
   Phone,
+  Loader2,
 } from 'lucide-react'
-import { getServiceById, SERVICES_DATA } from '@/data/services'
+import { getService, getServices } from '@/services/services.service'
+import { getIcon } from '@/config/icon-map'
 import { ROUTES } from '@/config/routes'
+import type { Service } from '@/types/service'
 
 export default function ServiceDetailPage() {
   const { id } = useParams()
-  const service = id ? getServiceById(id) : undefined
+  const [service, setService] = useState<Service | null>(null)
+  const [allServices, setAllServices] = useState<Service[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true)
+      try {
+        const [svc, all] = await Promise.all([
+          id ? getService(id) : Promise.resolve(null),
+          getServices({ isPublished: true }),
+        ])
+        setService(svc)
+        setAllServices(all)
+      } catch (err) {
+        console.error('Failed to fetch service:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4">
+        <Loader2 className="w-8 h-8 text-navy animate-spin" />
+        <span className="ml-3 text-text-secondary">加载服务数据...</span>
+      </div>
+    )
+  }
 
   if (!service) {
     return (
@@ -34,11 +68,13 @@ export default function ServiceDetailPage() {
     )
   }
 
+  const Icon = getIcon(service.iconName)
+
   // Find adjacent services for navigation
-  const currentIndex = SERVICES_DATA.findIndex((s) => s.id === service.id)
-  const prevService = currentIndex > 0 ? SERVICES_DATA[currentIndex - 1] : undefined
+  const currentIndex = allServices.findIndex((s) => s.id === service.id)
+  const prevService = currentIndex > 0 ? allServices[currentIndex - 1] : undefined
   const nextService =
-    currentIndex < SERVICES_DATA.length - 1 ? SERVICES_DATA[currentIndex + 1] : undefined
+    currentIndex < allServices.length - 1 ? allServices[currentIndex + 1] : undefined
 
   return (
     <div>
@@ -76,7 +112,7 @@ export default function ServiceDetailPage() {
         <div className="relative max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <div className="w-20 h-20 bg-white/15 rounded-2xl flex items-center justify-center shrink-0">
-              <service.icon className="w-10 h-10 text-gold" />
+              <Icon className="w-10 h-10 text-gold" />
             </div>
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold mb-2">

@@ -58,3 +58,8 @@ export const USER_ROLES = [
   { value: 'admin', label: '管理员' },
   { value: 'reviewer', label: '评审员' },
 ] as const
+
+export const ADMIN_LEVELS = [
+  { value: 'manager', label: '经理' },
+  { value: 'worker', label: '员工' },
+] as const

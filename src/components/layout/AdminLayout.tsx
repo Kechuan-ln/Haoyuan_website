@@ -8,7 +8,10 @@ import {
   Gavel,
   MessageSquare,
   Settings,
+  Wrench,
   Truck,
+  Info,
+  Home,
   LogOut,
   Menu,
   X,
@@ -23,16 +26,24 @@ const ADMIN_NAV_ITEMS: SidebarItem[] = [
   { label: '仪表盘', path: ROUTES.ADMIN, icon: LayoutDashboard },
   { label: '文章管理', path: ROUTES.ADMIN_ARTICLES, icon: FileText },
   { label: '业绩管理', path: ROUTES.ADMIN_PROJECTS, icon: Building2 },
-  { label: '供应商管理', path: ROUTES.ADMIN_VENDORS, icon: Truck },
+  { label: '服务管理', path: ROUTES.ADMIN_SERVICES, icon: Wrench },
+  { label: '团队管理', path: ROUTES.ADMIN_TEAM, icon: Users },
+  { label: '关于管理', path: ROUTES.ADMIN_ABOUT, icon: Info },
+  { label: '首页管理', path: ROUTES.ADMIN_HOME, icon: Home },
   { label: '招标管理', path: ROUTES.ADMIN_BIDS, icon: Gavel },
+  { label: '供应商管理', path: ROUTES.ADMIN_VENDORS, icon: Truck, managerOnly: true },
   { label: '留言管理', path: ROUTES.ADMIN_CONTACTS, icon: MessageSquare },
-  { label: '用户管理', path: ROUTES.ADMIN_USERS, icon: Users },
-  { label: '站点设置', path: ROUTES.ADMIN_SETTINGS, icon: Settings },
+  { label: '用户管理', path: ROUTES.ADMIN_USERS, icon: Users, managerOnly: true },
+  { label: '站点设置', path: ROUTES.ADMIN_SETTINGS, icon: Settings, managerOnly: true },
 ]
 
 export default function AdminLayout() {
-  const { appUser } = useAuth()
+  const { appUser, isManager } = useAuth()
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  const visibleItems = isManager
+    ? ADMIN_NAV_ITEMS
+    : ADMIN_NAV_ITEMS.filter((item) => !item.managerOnly)
 
   // Close drawer on window resize to desktop
   useEffect(() => {
@@ -49,7 +60,7 @@ export default function AdminLayout() {
     <div className="min-h-screen flex bg-bg-gray">
       {/* Desktop sidebar */}
       <div className="hidden lg:block">
-        <Sidebar items={ADMIN_NAV_ITEMS} accentColor="gold" />
+        <Sidebar items={visibleItems} accentColor="gold" />
       </div>
 
       {/* Mobile drawer overlay */}
@@ -67,7 +78,7 @@ export default function AdminLayout() {
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <Sidebar items={ADMIN_NAV_ITEMS} accentColor="gold" />
+        <Sidebar items={visibleItems} accentColor="gold" />
       </div>
 
       {/* Main content area */}

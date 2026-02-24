@@ -11,6 +11,8 @@ interface AuthContextValue {
   appUser: AppUser | null
   loading: boolean
   error: string | null
+  isManager: boolean
+  isWorker: boolean
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -18,6 +20,8 @@ const AuthContext = createContext<AuthContextValue>({
   appUser: null,
   loading: true,
   error: null,
+  isManager: false,
+  isWorker: false,
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -67,8 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe
   }, [])
 
+  const isManager =
+    appUser?.role === 'admin' && (appUser?.adminLevel ?? 'manager') === 'manager'
+  const isWorker =
+    appUser?.role === 'admin' && appUser?.adminLevel === 'worker'
+
   return (
-    <AuthContext.Provider value={{ user, appUser, loading, error }}>
+    <AuthContext.Provider value={{ user, appUser, loading, error, isManager, isWorker }}>
       {children}
     </AuthContext.Provider>
   )

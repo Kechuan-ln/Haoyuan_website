@@ -31,7 +31,7 @@ src/
 │   ├── public/    # 官网 (首页/关于/服务/项目/新闻/联系)
 │   ├── bidding/   # 招标大厅, 招标详情
 │   ├── vendor/    # 供应商门户 (注册/仪表盘/投标/结果)
-│   ├── admin/     # 管理后台 CMS (文章/项目/招标/供应商/评标/设置)
+│   ├── admin/     # 管理后台 CMS (文章/项目/服务/团队/关于/首页/招标/供应商/评标/用户/设置)
 │   └── auth/      # 登录/注册
 ├── utils/         # cn(), hash, format
 └── styles/        # globals.css (Tailwind @theme + ProseMirror)
@@ -41,7 +41,9 @@ src/
 - `@/` → src/ | `import type` 必须 (verbatimModuleSyntax)
 - 服务层纯函数 | React.lazy 懒加载 | 中文 UI
 - 品牌色: navy(#1B3A5C) gold(#D4A843) teal(#2B8A9E) bg-gray(#F5F5F5)
-- 角色: admin, vendor, reviewer | 角色存 Firestore `users` 集合
+- 角色: admin(manager/worker), vendor, reviewer | 角色存 Firestore `users` 集合
+- AdminLevel: manager 可管全部 | worker 不可访问供应商/用户/站点/评标
+- Icon 动态化: Firestore 存 iconName 字符串, `src/config/icon-map.ts` 解析
 - Firestore Rules: helper 函数用 `exists()` 防护再 `get().data`
 - 严格模式: noUnusedLocals, noUnusedParameters
 - .env 管理 Firebase 配置 (不提交 Git)
@@ -49,5 +51,5 @@ src/
 ## Status
 - [x] Phase 1-5 完成 (官网 + 管理后台 + 招投标 + 图片上传 + 富文本)
 - [x] Phase 6: CI/CD + 代码分割 + SEO
-- [ ] Phase 7: 管理员分级 + 内容动态化
+- [x] Phase 7: 管理员分级 + 内容动态化
 - [ ] 移动端响应式

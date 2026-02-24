@@ -1,14 +1,35 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
   Building2,
   CheckCircle,
   Phone,
+  Loader2,
 } from 'lucide-react'
-import { SERVICES_DATA } from '@/data/services'
+import { getServices } from '@/services/services.service'
+import { getIcon } from '@/config/icon-map'
 import { ROUTES } from '@/config/routes'
+import type { Service } from '@/types/service'
 
 export default function ServicesPage() {
+  const [services, setServices] = useState<Service[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const data = await getServices({ isPublished: true })
+        setServices(data)
+      } catch (err) {
+        console.error('Failed to fetch services:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchServices()
+  }, [])
+
   return (
     <div>
       {/* Hero Section */}
@@ -38,63 +59,78 @@ export default function ServicesPage() {
       {/* Services Grid */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col gap-8">
-            {SERVICES_DATA.map((service, index) => (
-              <div
-                key={service.id}
-                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-2px] overflow-hidden"
-              >
-                <div className="flex flex-col lg:flex-row">
-                  {/* Left: Icon and Number */}
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 text-navy animate-spin" />
+              <span className="ml-3 text-text-secondary">加载服务数据...</span>
+            </div>
+          ) : services.length > 0 ? (
+            <div className="flex flex-col gap-8">
+              {services.map((service, index) => {
+                const Icon = getIcon(service.iconName)
+                return (
                   <div
-                    className={`lg:w-64 shrink-0 p-8 flex flex-col items-center justify-center ${
-                      index % 2 === 0
-                        ? 'bg-gradient-to-br from-navy to-navy-dark'
-                        : 'bg-gradient-to-br from-teal to-teal-dark'
-                    }`}
+                    key={service.id}
+                    className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-2px] overflow-hidden"
                   >
-                    <div className="w-16 h-16 bg-white/15 rounded-2xl flex items-center justify-center mb-4">
-                      <service.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <span className="text-white/50 text-sm font-medium">
-                      0{index + 1}
-                    </span>
-                  </div>
-
-                  {/* Right: Content */}
-                  <div className="flex-1 p-8 lg:p-10">
-                    <h3 className="text-2xl font-bold text-navy mb-4">
-                      {service.title}
-                    </h3>
-                    <p className="text-text-secondary leading-relaxed mb-6">
-                      {service.description}
-                    </p>
-
-                    {/* Key Points */}
-                    <div className="flex flex-wrap gap-3 mb-6">
-                      {service.keyPoints.map((point) => (
-                        <span
-                          key={point}
-                          className="inline-flex items-center gap-1.5 text-sm bg-bg-gray text-text-primary px-3 py-1.5 rounded-full"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5 text-teal" />
-                          {point}
+                    <div className="flex flex-col lg:flex-row">
+                      {/* Left: Icon and Number */}
+                      <div
+                        className={`lg:w-64 shrink-0 p-8 flex flex-col items-center justify-center ${
+                          index % 2 === 0
+                            ? 'bg-gradient-to-br from-navy to-navy-dark'
+                            : 'bg-gradient-to-br from-teal to-teal-dark'
+                        }`}
+                      >
+                        <div className="w-16 h-16 bg-white/15 rounded-2xl flex items-center justify-center mb-4">
+                          <Icon className="w-8 h-8 text-white" />
+                        </div>
+                        <span className="text-white/50 text-sm font-medium">
+                          0{index + 1}
                         </span>
-                      ))}
-                    </div>
+                      </div>
 
-                    <Link
-                      to={`${ROUTES.SERVICES}/${service.id}`}
-                      className="inline-flex items-center gap-2 text-teal hover:text-teal-dark font-medium transition-colors group"
-                    >
-                      查看详情
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </Link>
+                      {/* Right: Content */}
+                      <div className="flex-1 p-8 lg:p-10">
+                        <h3 className="text-2xl font-bold text-navy mb-4">
+                          {service.title}
+                        </h3>
+                        <p className="text-text-secondary leading-relaxed mb-6">
+                          {service.description}
+                        </p>
+
+                        {/* Key Points */}
+                        <div className="flex flex-wrap gap-3 mb-6">
+                          {service.keyPoints.map((point) => (
+                            <span
+                              key={point}
+                              className="inline-flex items-center gap-1.5 text-sm bg-bg-gray text-text-primary px-3 py-1.5 rounded-full"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5 text-teal" />
+                              {point}
+                            </span>
+                          ))}
+                        </div>
+
+                        <Link
+                          to={`${ROUTES.SERVICES}/${service.id}`}
+                          className="inline-flex items-center gap-2 text-teal hover:text-teal-dark font-medium transition-colors group"
+                        >
+                          查看详情
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <Building2 className="w-12 h-12 text-text-muted/30 mx-auto mb-4" />
+              <p className="text-text-muted">暂无服务数据</p>
+            </div>
+          )}
         </div>
       </section>
 

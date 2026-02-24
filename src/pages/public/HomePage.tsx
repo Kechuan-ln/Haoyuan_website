@@ -1,115 +1,112 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Building2,
-  Target,
-  Handshake,
-  Shield,
-  Heart,
-  ShieldCheck,
-  HardHat,
-  BarChart3,
-  Calculator,
-  FileText,
-  LayoutDashboard,
-  MessageSquare,
   ArrowRight,
-  Award,
-  CheckCircle,
-  Calendar,
-  Briefcase,
+  Loader2,
 } from 'lucide-react'
 import { COMPANY } from '@/config/constants'
 import { ROUTES } from '@/config/routes'
+import { getProjects } from '@/services/projects.service'
+import { getServices } from '@/services/services.service'
+import { getHomeContent } from '@/services/home-content.service'
+import { getIcon } from '@/config/icon-map'
+import { CATEGORY_LABELS } from '@/data/projects'
+import type { Project } from '@/types/project'
+import type { Service } from '@/types/service'
+import type { HomeContent } from '@/types/home'
 
-const VALUES = [
-  { label: '专业', icon: Target, description: '以精湛技术立身' },
-  { label: '共赢', icon: Handshake, description: '与客户共创价值' },
-  { label: '责任', icon: Shield, description: '对品质负责到底' },
-  { label: '诚信', icon: Heart, description: '以诚信赢得信赖' },
+/* ---------- Default values (used when Firestore doc is empty) ---------- */
+
+const DEFAULT_BRAND_VALUES: HomeContent['brandValues'] = [
+  { label: '专业', iconName: 'Target', description: '以精湛技术立身' },
+  { label: '共赢', iconName: 'Handshake', description: '与客户共创价值' },
+  { label: '责任', iconName: 'Shield', description: '对品质负责到底' },
+  { label: '诚信', iconName: 'Heart', description: '以诚信赢得信赖' },
 ]
 
-const THREE_NO_WORRIES = [
+const DEFAULT_THREE_NO_WORRIES: HomeContent['threeNoWorries'] = [
   {
     title: '质量零事故',
-    icon: ShieldCheck,
+    iconName: 'ShieldCheck',
     description: '严格把控工程质量，建立全过程质量管控体系，确保每一个环节都符合国家标准和行业规范。',
   },
   {
     title: '安全无隐患',
-    icon: HardHat,
+    iconName: 'HardHat',
     description: '贯彻安全生产责任制，落实安全防护措施，打造零隐患施工环境，保障人员与财产安全。',
   },
   {
     title: '进度可视化',
-    icon: BarChart3,
+    iconName: 'BarChart3',
     description: '运用数字化管理工具，实时跟踪项目进度，让客户随时掌握工程动态，做到心中有数。',
   },
 ]
 
-const SERVICES = [
-  {
-    title: '工程造价',
-    icon: Calculator,
-    description: '工程造价咨询、预算编制、结算审核，精准把控项目成本。',
-    id: 'cost',
-  },
-  {
-    title: '招标代理',
-    icon: FileText,
-    description: '招标方案编制、评标组织、合同谈判，规范高效的招标流程。',
-    id: 'bidding-agent',
-  },
-  {
-    title: '工程监理',
-    icon: Shield,
-    description: '施工阶段监理、质量安全管控，全方位保障工程品质。',
-    id: 'supervision',
-  },
-  {
-    title: '项目管理',
-    icon: LayoutDashboard,
-    description: '项目全过程管理、进度协调，确保工程按期保质完成。',
-    id: 'management',
-  },
-  {
-    title: '工程咨询',
-    icon: MessageSquare,
-    description: '可行性研究、技术咨询，为工程决策提供专业支持。',
-    id: 'consulting',
-  },
-]
-
-const FEATURED_PROJECTS = [
-  {
-    title: '深圳市宝安区福永人民医院消化内镜中心改造工程',
-    category: '医疗',
-    scope: '工程造价咨询及全过程项目管理服务',
-  },
-  {
-    title: '华兴光伏发电项目工程',
-    category: '光伏',
-    scope: '工程监理及质量安全管控服务',
-  },
-  {
-    title: '中山大学深圳校区人才保障性住房安居澜庭装修工程',
-    category: '住房',
-    scope: '招标代理及工程造价咨询服务',
-  },
-  {
-    title: '中国科学院深圳理工大学明珠校区项目',
-    category: '教育',
-    scope: '全过程工程咨询及项目管理服务',
-  },
-]
-
-const STATS = [
-  { value: '50+', label: '项目经验', icon: Briefcase },
-  { value: '100%', label: '合格率', icon: CheckCircle },
-  { value: '5+', label: '业务领域', icon: Award },
-  { value: '2021', label: '成立年份', icon: Calendar },
+const DEFAULT_STATS: HomeContent['stats'] = [
+  { value: '50+', label: '项目经验', iconName: 'Briefcase' },
+  { value: '100%', label: '合格率', iconName: 'CheckCircle' },
+  { value: '5+', label: '业务领域', iconName: 'Award' },
+  { value: '2021', label: '成立年份', iconName: 'Calendar' },
 ]
 
 export default function HomePage() {
+  const [featuredProjects, setFeaturedProjects] = useState<Project[]>([])
+  const [projectsLoading, setProjectsLoading] = useState(true)
+  const [homeServices, setHomeServices] = useState<Service[]>([])
+  const [servicesLoading, setServicesLoading] = useState(true)
+  const [homeContent, setHomeContent] = useState<HomeContent | null>(null)
+
+  useEffect(() => {
+    async function fetchFeatured() {
+      try {
+        const data = await getProjects({ isPublished: true })
+        setFeaturedProjects(data.slice(0, 4))
+      } catch (err) {
+        console.error('Failed to fetch featured projects:', err)
+      } finally {
+        setProjectsLoading(false)
+      }
+    }
+    fetchFeatured()
+  }, [])
+
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const data = await getServices({ isPublished: true })
+        setHomeServices(data.slice(0, 5))
+      } catch (err) {
+        console.error('Failed to fetch services:', err)
+      } finally {
+        setServicesLoading(false)
+      }
+    }
+    fetchServices()
+  }, [])
+
+  useEffect(() => {
+    async function fetchHomeContent() {
+      try {
+        const data = await getHomeContent()
+        setHomeContent(data)
+      } catch (err) {
+        console.error('Failed to fetch home content:', err)
+      }
+    }
+    fetchHomeContent()
+  }, [])
+
+  const brandValues = homeContent?.brandValues?.length
+    ? homeContent.brandValues
+    : DEFAULT_BRAND_VALUES
+  const threeNoWorries = homeContent?.threeNoWorries?.length
+    ? homeContent.threeNoWorries
+    : DEFAULT_THREE_NO_WORRIES
+  const stats = homeContent?.stats?.length
+    ? homeContent.stats
+    : DEFAULT_STATS
+
   return (
     <div>
       {/* Hero Section */}
@@ -174,15 +171,18 @@ export default function HomePage() {
       <section className="bg-gradient-to-r from-gold-dark via-gold to-gold-dark py-6 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
-            {VALUES.map((v) => (
-              <div key={v.label} className="flex items-center justify-center gap-3 text-navy">
-                <v.icon className="w-6 h-6 shrink-0" />
-                <div>
-                  <span className="text-lg font-bold">{v.label}</span>
-                  <p className="text-xs text-navy/70 hidden sm:block">{v.description}</p>
+            {brandValues.map((v) => {
+              const Icon = getIcon(v.iconName)
+              return (
+                <div key={v.label} className="flex items-center justify-center gap-3 text-navy">
+                  <Icon className="w-6 h-6 shrink-0" />
+                  <div>
+                    <span className="text-lg font-bold">{v.label}</span>
+                    <p className="text-xs text-navy/70 hidden sm:block">{v.description}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
@@ -199,18 +199,21 @@ export default function HomePage() {
             </p>
           </div>
           <div className="grid sm:grid-cols-3 gap-8">
-            {THREE_NO_WORRIES.map((item) => (
-              <div
-                key={item.title}
-                className="bg-white rounded-xl p-8 border-l-4 border-navy shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
-              >
-                <div className="w-14 h-14 bg-navy/10 rounded-xl flex items-center justify-center mb-6">
-                  <item.icon className="w-7 h-7 text-navy" />
+            {threeNoWorries.map((item) => {
+              const Icon = getIcon(item.iconName)
+              return (
+                <div
+                  key={item.title}
+                  className="bg-white rounded-xl p-8 border-l-4 border-navy shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
+                >
+                  <div className="w-14 h-14 bg-navy/10 rounded-xl flex items-center justify-center mb-6">
+                    <Icon className="w-7 h-7 text-navy" />
+                  </div>
+                  <h3 className="text-xl font-bold text-navy mb-3">{item.title}</h3>
+                  <p className="text-text-secondary leading-relaxed">{item.description}</p>
                 </div>
-                <h3 className="text-xl font-bold text-navy mb-3">{item.title}</h3>
-                <p className="text-text-secondary leading-relaxed">{item.description}</p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
@@ -226,25 +229,41 @@ export default function HomePage() {
               覆盖工程建设全生命周期的专业技术服务
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {SERVICES.map((service) => (
-              <Link
-                key={service.id}
-                to={`${ROUTES.SERVICES}/${service.id}`}
-                className="group bg-white rounded-xl p-8 shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] border border-border"
-              >
-                <div className="w-14 h-14 bg-teal/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-teal/20 transition-colors">
-                  <service.icon className="w-7 h-7 text-teal" />
-                </div>
-                <h3 className="text-xl font-bold text-navy mb-3">{service.title}</h3>
-                <p className="text-text-secondary leading-relaxed mb-4">{service.description}</p>
-                <span className="inline-flex items-center gap-1 text-teal text-sm font-medium group-hover:gap-2 transition-all">
-                  了解更多
-                  <ArrowRight className="w-4 h-4" />
-                </span>
-              </Link>
-            ))}
-          </div>
+
+          {servicesLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 text-navy animate-spin" />
+              <span className="ml-3 text-text-secondary">加载服务数据...</span>
+            </div>
+          ) : homeServices.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {homeServices.map((service) => {
+                const Icon = getIcon(service.iconName)
+                return (
+                  <Link
+                    key={service.id}
+                    to={`${ROUTES.SERVICES}/${service.id}`}
+                    className="group bg-white rounded-xl p-8 shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] border border-border"
+                  >
+                    <div className="w-14 h-14 bg-teal/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-teal/20 transition-colors">
+                      <Icon className="w-7 h-7 text-teal" />
+                    </div>
+                    <h3 className="text-xl font-bold text-navy mb-3">{service.title}</h3>
+                    <p className="text-text-secondary leading-relaxed mb-4">{service.description}</p>
+                    <span className="inline-flex items-center gap-1 text-teal text-sm font-medium group-hover:gap-2 transition-all">
+                      了解更多
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <Building2 className="w-12 h-12 text-text-muted/30 mx-auto mb-4" />
+              <p className="text-text-muted">暂无服务数据</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -259,27 +278,53 @@ export default function HomePage() {
               深耕工程建设领域，为众多标杆项目提供优质技术服务
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {FEATURED_PROJECTS.map((project) => (
-              <div
-                key={project.title}
-                className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
-              >
-                <div className="h-44 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center relative">
-                  <Building2 className="w-12 h-12 text-navy/20" />
-                  <span className="absolute top-3 left-3 bg-teal text-white text-xs font-medium px-3 py-1 rounded-full">
-                    {project.category}
-                  </span>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-bold text-text-primary mb-2 leading-snug line-clamp-2">
-                    {project.title}
-                  </h3>
-                  <p className="text-sm text-text-secondary">{project.scope}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+
+          {projectsLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 text-navy animate-spin" />
+              <span className="ml-3 text-text-secondary">加载项目数据...</span>
+            </div>
+          ) : featuredProjects.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredProjects.map((project) => {
+                const categoryLabel = CATEGORY_LABELS[project.category] ?? project.category
+                return (
+                  <Link
+                    key={project.id}
+                    to={`${ROUTES.PROJECTS}/${project.id}`}
+                    className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
+                  >
+                    <div className="h-44 bg-gradient-to-br from-navy/5 to-navy/10 flex items-center justify-center relative overflow-hidden">
+                      {project.coverImageUrl ? (
+                        <img
+                          src={project.coverImageUrl}
+                          alt={project.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Building2 className="w-12 h-12 text-navy/20" />
+                      )}
+                      <span className="absolute top-3 left-3 bg-teal text-white text-xs font-medium px-3 py-1 rounded-full">
+                        {categoryLabel}
+                      </span>
+                    </div>
+                    <div className="p-5">
+                      <h3 className="font-bold text-text-primary mb-2 leading-snug line-clamp-2 group-hover:text-navy transition-colors">
+                        {project.title}
+                      </h3>
+                      <p className="text-sm text-text-secondary">{project.scope}</p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <Building2 className="w-12 h-12 text-text-muted/30 mx-auto mb-4" />
+              <p className="text-text-muted">暂无项目数据</p>
+            </div>
+          )}
+
           <div className="mt-10 text-center">
             <Link
               to={ROUTES.PROJECTS}
@@ -296,15 +341,18 @@ export default function HomePage() {
       <section className="bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-20 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {STATS.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <stat.icon className="w-7 h-7 text-gold" />
+            {stats.map((stat) => {
+              const Icon = getIcon(stat.iconName)
+              return (
+                <div key={stat.label} className="text-center">
+                  <div className="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Icon className="w-7 h-7 text-gold" />
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-bold text-gold mb-2">{stat.value}</div>
+                  <div className="text-white/70 text-sm">{stat.label}</div>
                 </div>
-                <div className="text-3xl sm:text-4xl font-bold text-gold mb-2">{stat.value}</div>
-                <div className="text-white/70 text-sm">{stat.label}</div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>

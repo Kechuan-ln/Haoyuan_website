@@ -38,6 +38,10 @@ export const ROUTES = {
   ADMIN_BID_EVALUATE: '/admin/bids/:id/evaluate',
   ADMIN_BID_REPORT: '/admin/bids/:id/report',
   ADMIN_CONTACTS: '/admin/contacts',
+  ADMIN_SERVICES: '/admin/services',
+  ADMIN_TEAM: '/admin/team',
+  ADMIN_ABOUT: '/admin/about',
+  ADMIN_HOME: '/admin/home',
   ADMIN_USERS: '/admin/users',
   ADMIN_SETTINGS: '/admin/settings',
 } as const
