@@ -29,7 +29,7 @@ export default function Sidebar({
 
   useEffect(() => {
     onClose?.()
-  }, [location.pathname])
+  }, [location.pathname, onClose])
 
   const activeClasses =
     accentColor === 'teal'
