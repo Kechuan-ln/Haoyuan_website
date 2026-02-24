@@ -17,32 +17,43 @@ export function HeroCarousel({ slides, interval = 5000 }: HeroCarouselProps) {
 
   const count = slides.length
 
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (count <= 1) return
+    timerRef.current = setInterval(() => {
+      if (!paused.current) setCurrent((i) => (i + 1) % count)
+    }, interval)
+  }, [count, interval])
+
   const next = useCallback(() => {
     if (count <= 1) return
     setCurrent((i) => (i + 1) % count)
-  }, [count])
+    resetTimer()
+  }, [count, resetTimer])
 
   const prev = useCallback(() => {
     if (count <= 1) return
     setCurrent((i) => (i - 1 + count) % count)
-  }, [count])
+    resetTimer()
+  }, [count, resetTimer])
+
+  const goTo = useCallback((idx: number) => {
+    setCurrent(idx)
+    resetTimer()
+  }, [resetTimer])
 
   /* auto-play */
   useEffect(() => {
-    if (count <= 1) return
-    function tick() {
-      if (!paused.current) next()
-    }
-    timerRef.current = setInterval(tick, interval)
+    resetTimer()
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [count, interval, next])
+  }, [resetTimer])
 
   /* ---------- fallback: static hero ---------- */
   if (count === 0) {
     return (
-      <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white py-24 sm:py-32 px-4 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-navy via-navy to-navy-dark text-white h-[500px] sm:h-[560px] md:h-[620px] px-4 overflow-hidden flex items-center justify-center">
         <div className="absolute inset-0 opacity-[0.06]">
           <div className="absolute top-10 left-10 w-40 h-40 border-2 border-white rotate-45" />
           <div className="absolute top-32 right-20 w-24 h-24 border-2 border-white rotate-12" />
@@ -109,7 +120,7 @@ export function HeroCarousel({ slides, interval = 5000 }: HeroCarouselProps) {
       {/* slides */}
       {slides.map((slide, idx) => (
         <div
-          key={idx}
+          key={slide.title || idx}
           className={`absolute inset-0 transition-opacity duration-300 ${
             idx === current ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none z-0'
           }`}
@@ -180,10 +191,10 @@ export function HeroCarousel({ slides, interval = 5000 }: HeroCarouselProps) {
       {/* dots */}
       {count > 1 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-          {slides.map((_, idx) => (
+          {slides.map((s, idx) => (
             <button
-              key={idx}
-              onClick={() => setCurrent(idx)}
+              key={s.title || idx}
+              onClick={() => goTo(idx)}
               className={`w-2.5 h-2.5 rounded-full transition-all ${
                 idx === current
                   ? 'bg-white w-6'
