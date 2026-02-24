@@ -7,9 +7,11 @@ import {
   Briefcase,
   Layers,
   Navigation,
-  Loader2,
   AlertCircle,
 } from 'lucide-react'
+import { CardSkeleton } from '@/components/shared/Skeleton'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { SectionHeading } from '@/components/shared/SectionHeading'
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
@@ -51,15 +53,6 @@ export default function ProjectsPage() {
     activeCategory === 'all'
       ? projects
       : projects.filter((p) => p.category === activeCategory)
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 className="w-8 h-8 text-navy animate-spin" />
-        <span className="ml-3 text-text-secondary">加载项目数据...</span>
-      </div>
-    )
-  }
 
   return (
     <div>
@@ -117,13 +110,18 @@ export default function ProjectsPage() {
       {/* Projects Grid */}
       <section className="py-16 sm:py-20 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
+          <SectionHeading title="项目案例" subtitle="丰富的工程业绩，覆盖医疗、教育、住房、产业园等多个领域" />
           {/* Results count */}
-          <p className="text-sm text-text-muted mb-8">
-            共 <span className="text-navy font-semibold">{filteredProjects.length}</span> 个项目
-          </p>
+          {!loading && (
+            <p className="text-sm text-text-muted mb-8">
+              共 <span className="text-navy font-semibold">{filteredProjects.length}</span> 个项目
+            </p>
+          )}
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => {
+            {loading
+              ? [...Array(6)].map((_, i) => <CardSkeleton key={i} />)
+              : filteredProjects.map((project) => {
               const colors = CATEGORY_COLORS[project.category] ?? {
                 bg: 'bg-gray-100',
                 text: 'text-gray-700',
@@ -179,14 +177,10 @@ export default function ProjectsPage() {
             })}
           </div>
 
+
           {/* Empty state */}
-          {filteredProjects.length === 0 && (
-            <div className="text-center py-20">
-              <Building2 className="w-16 h-16 text-text-muted/30 mx-auto mb-4" />
-              <p className="text-text-muted text-lg">
-                该类别暂无项目
-              </p>
-            </div>
+          {!loading && filteredProjects.length === 0 && (
+            <EmptyState title="暂无项目案例" description="项目信息正在整理中" />
           )}
         </div>
       </section>
@@ -194,7 +188,7 @@ export default function ProjectsPage() {
       {/* Stats Section */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="text-center p-6 rounded-xl bg-bg-gray">
               <div className="w-12 h-12 bg-navy/10 rounded-xl flex items-center justify-center mx-auto mb-3">
                 <Briefcase className="w-6 h-6 text-navy" />

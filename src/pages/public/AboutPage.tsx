@@ -11,6 +11,7 @@ import { COMPANY } from '@/config/constants'
 import { ROUTES } from '@/config/routes'
 import { getIcon } from '@/config/icon-map'
 import { getAboutContent } from '@/services/about-content.service'
+import { SectionHeading } from '@/components/shared/SectionHeading'
 import type { AboutContent } from '@/types/about'
 
 /* ---------- Default Content (fallback when Firestore is empty) ---------- */
@@ -162,12 +163,7 @@ export default function AboutPage() {
       {/* Development Milestones */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">发展历程</h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              稳步前行，持续成长
-            </p>
-          </div>
+          <SectionHeading title="发展历程" subtitle="稳步前行，持续成长" />
           <div className="max-w-3xl mx-auto">
             <div className="relative">
               {/* Timeline line */}
@@ -192,12 +188,7 @@ export default function AboutPage() {
       {/* Core Values Section */}
       <section className="py-20 sm:py-24 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">核心价值观</h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              以专业、诚信、创新、责任为核心，构建企业发展的坚实基础
-            </p>
-          </div>
+          <SectionHeading title="核心价值观" subtitle="以专业、诚信、创新、责任为核心，构建企业发展的坚实基础" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {content.coreValues.map((value) => {
               const Icon = getIcon(value.iconName)
@@ -222,14 +213,7 @@ export default function AboutPage() {
       {/* 创优三承诺 Section */}
       <section className="py-20 sm:py-24 px-4 bg-bg-gray">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">
-              "创优三承诺"
-            </h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              文明工地、品质标杆、绿色先锋，以三大承诺践行企业使命
-            </p>
-          </div>
+          <SectionHeading title='"创优三承诺"' subtitle="文明工地、品质标杆、绿色先锋，以三大承诺践行企业使命" />
           <div className="grid sm:grid-cols-3 gap-8">
             {content.threePromises.map((promise) => {
               const PromiseIcon = getIcon(promise.iconName)
