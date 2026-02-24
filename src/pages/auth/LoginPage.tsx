@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { signIn, resetPassword } from '@/services/auth.service'
 import { ROUTES } from '@/config/routes'
@@ -90,6 +91,17 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg-gray px-4">
       <div className="w-full max-w-md">
+        {/* Back to home */}
+        <div className="mb-4">
+          <Link
+            to={ROUTES.HOME}
+            className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-navy transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            返回首页
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-navy">

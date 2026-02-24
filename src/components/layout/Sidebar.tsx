@@ -9,6 +9,7 @@ export interface SidebarItem {
   path: string
   icon: LucideIcon
   managerOnly?: boolean
+  badge?: number
 }
 
 interface SidebarProps {
@@ -92,7 +93,16 @@ export default function Sidebar({
                 title={collapsed ? item.label : undefined}
               >
                 <item.icon className="w-5 h-5 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && (
+                  <span className="flex items-center gap-2">
+                    {item.label}
+                    {item.badge != null && item.badge > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </span>
+                )}
               </NavLink>
             </li>
           ))}

@@ -59,7 +59,12 @@ service cloud.firestore {
     match /projects/{projectId} {
       allow read: if isAdmin()
         || (resource.data.isPublished == true);
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        && (isManager()
+            || (request.resource.data.isPublished != true
+                && request.resource.data.status != 'published'));
+      allow delete: if isManager();
     }
 
     // ─── Articles ──────────────────────────────────────────────────────
@@ -67,7 +72,12 @@ service cloud.firestore {
     match /articles/{articleId} {
       allow read: if isAdmin()
         || (resource.data.isPublished == true);
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        && (isManager()
+            || (request.resource.data.isPublished != true
+                && request.resource.data.status != 'published'));
+      allow delete: if isManager();
     }
 
     // ─── Bids ──────────────────────────────────────────────────────────
@@ -120,7 +130,12 @@ service cloud.firestore {
     match /services/{serviceId} {
       allow read: if isAdmin()
         || (resource.data.isPublished == true);
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        && (isManager()
+            || (request.resource.data.isPublished != true
+                && request.resource.data.status != 'published'));
+      allow delete: if isManager();
     }
 
     // ─── Content (team, about, home) ─────────────────────────────────
@@ -134,7 +149,24 @@ service cloud.firestore {
     match /qualifications/{qualId} {
       allow read: if isAdmin()
         || (resource.data.isPublished == true);
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        && (isManager()
+            || (request.resource.data.isPublished != true
+                && request.resource.data.status != 'published'));
+      allow delete: if isManager();
+    }
+
+    // ─── Notifications ───────────────────────────────────────────────────
+
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated()
+        && resource.data.toUserId == request.auth.uid;
+      allow create: if isAdmin();
+      allow update: if isAuthenticated()
+        && resource.data.toUserId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if false;
     }
 
     // ─── Site Settings ─────────────────────────────────────────────────

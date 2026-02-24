@@ -14,11 +14,13 @@ import {
 import type { UpdateData } from 'firebase/firestore'
 import { requireDb } from '@/config/firebase'
 import type { Service } from '@/types/service'
+import type { ContentStatus } from '@/types/content-status'
 
 const SERVICES = 'services'
 
 export interface ServiceFilters {
   isPublished?: boolean
+  status?: ContentStatus
 }
 
 export async function getServices(filters?: ServiceFilters): Promise<Service[]> {
@@ -26,6 +28,9 @@ export async function getServices(filters?: ServiceFilters): Promise<Service[]> 
   const constraints = []
   if (filters?.isPublished !== undefined) {
     constraints.push(where('isPublished', '==', filters.isPublished))
+  }
+  if (filters?.status) {
+    constraints.push(where('status', '==', filters.status))
   }
   constraints.push(orderBy('sortOrder', 'asc'))
   const q = query(collection(db, SERVICES), ...constraints)
@@ -46,6 +51,7 @@ export async function createService(
   const db = requireDb()
   const ref = await addDoc(collection(db, SERVICES), {
     ...data,
+    status: 'draft' as ContentStatus,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })

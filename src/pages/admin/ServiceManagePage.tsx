@@ -8,9 +8,12 @@ import {
   Save,
   Loader2,
   AlertCircle,
-  Eye,
-  EyeOff,
   GripVertical,
+  Send,
+  Check,
+  Ban,
+  Info,
+  AlertTriangle,
 } from 'lucide-react'
 import {
   getServices,
@@ -18,8 +21,13 @@ import {
   updateService,
   deleteService,
 } from '@/services/services.service'
+import { submitForReview, publishDirectly, approveContent, rejectContent, unpublishContent } from '@/services/workflow.service'
+import { notifyManagers, createNotification } from '@/services/notifications.service'
+import { useAuth } from '@/contexts/AuthContext'
 import { getIcon, ICON_MAP } from '@/config/icon-map'
+import ContentStatusBadge from '@/components/shared/ContentStatusBadge'
 import type { Service } from '@/types/service'
+import type { ContentStatus } from '@/types/content-status'
 
 /* ---------- Types ---------- */
 
@@ -31,7 +39,6 @@ type FormData = {
   detailDescription: string
   scopeItems: string
   relatedProjects: string
-  isPublished: boolean
   sortOrder: string
 }
 
@@ -47,15 +54,16 @@ const EMPTY_FORM: FormData = {
   detailDescription: '',
   scopeItems: '',
   relatedProjects: '',
-  isPublished: true,
   sortOrder: '0',
 }
 
-const PUBLISH_FILTER_OPTIONS = [
+const STATUS_FILTER_OPTIONS: { label: string; value: string }[] = [
   { label: '全部', value: 'all' },
+  { label: '草稿', value: 'draft' },
+  { label: '待审核', value: 'pending_review' },
   { label: '已发布', value: 'published' },
-  { label: '未发布', value: 'unpublished' },
-] as const
+  { label: '已退回', value: 'rejected' },
+]
 
 /* ---------- Helpers ---------- */
 
@@ -70,9 +78,15 @@ function joinComma(arr: string[]): string {
   return arr.join('，')
 }
 
+function getContentStatus(item: Service): ContentStatus {
+  return item.status ?? (item.isPublished ? 'published' : 'draft')
+}
+
 /* ---------- Component ---------- */
 
 export default function ServiceManagePage() {
+  const { user, appUser, isManager, isWorker } = useAuth()
+
   // Data
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
@@ -81,17 +95,23 @@ export default function ServiceManagePage() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
-  const [publishFilter, setPublishFilter] = useState<
-    'all' | 'published' | 'unpublished'
-  >('all')
+  const [statusFilter, setStatusFilter] = useState('all')
 
   // Form state
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingService, setEditingService] = useState<Service | null>(null)
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
 
   // Confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+
+  // Derived content status for form
+  const formContentStatus: ContentStatus = editingService
+    ? getContentStatus(editingService)
+    : 'draft'
+
+  const isLockedForWorker = isWorker && formContentStatus === 'pending_review'
 
   /* ---- Fetch data ---- */
 
@@ -117,8 +137,8 @@ export default function ServiceManagePage() {
 
   const filtered = useMemo(() => {
     return services.filter((s) => {
-      if (publishFilter === 'published' && !s.isPublished) return false
-      if (publishFilter === 'unpublished' && s.isPublished) return false
+      const status = getContentStatus(s)
+      if (statusFilter !== 'all' && status !== statusFilter) return false
       if (
         searchQuery.trim() &&
         !s.title.includes(searchQuery.trim()) &&
@@ -127,7 +147,7 @@ export default function ServiceManagePage() {
         return false
       return true
     })
-  }, [services, searchQuery, publishFilter])
+  }, [services, searchQuery, statusFilter])
 
   const serviceCount = filtered.length
 
@@ -135,12 +155,14 @@ export default function ServiceManagePage() {
 
   function openAddForm() {
     setEditingId(null)
+    setEditingService(null)
     setForm(EMPTY_FORM)
     setShowForm(true)
   }
 
   function openEditForm(service: Service) {
     setEditingId(service.id)
+    setEditingService(service)
     setForm({
       title: service.title,
       iconName: service.iconName,
@@ -149,7 +171,6 @@ export default function ServiceManagePage() {
       detailDescription: service.detailDescription,
       scopeItems: joinComma(service.scopeItems ?? []),
       relatedProjects: joinComma(service.relatedProjects ?? []),
-      isPublished: service.isPublished,
       sortOrder: String(service.sortOrder ?? 0),
     })
     setShowForm(true)
@@ -158,13 +179,16 @@ export default function ServiceManagePage() {
   function closeForm() {
     setShowForm(false)
     setEditingId(null)
+    setEditingService(null)
     setForm(EMPTY_FORM)
   }
 
-  async function handleSave() {
+  async function handleSaveDraft() {
     if (!form.title.trim()) return
     setSaving(true)
     try {
+      const isWorkerEditingPublished = isWorker && editingService && getContentStatus(editingService) === 'published'
+
       const payload = {
         title: form.title,
         iconName: form.iconName,
@@ -173,7 +197,8 @@ export default function ServiceManagePage() {
         detailDescription: form.detailDescription,
         scopeItems: splitComma(form.scopeItems),
         relatedProjects: splitComma(form.relatedProjects),
-        isPublished: form.isPublished,
+        isPublished: false,
+        status: 'draft' as ContentStatus,
         sortOrder: Number(form.sortOrder) || 0,
       }
 
@@ -184,6 +209,9 @@ export default function ServiceManagePage() {
             s.id === editingId ? { ...s, ...payload } : s,
           ),
         )
+        if (isWorkerEditingPublished) {
+          alert('已保存为草稿，内容已下线，需重新提交审核')
+        }
       } else {
         const newId = await createService(payload)
         const newService: Service = {
@@ -203,6 +231,109 @@ export default function ServiceManagePage() {
     }
   }
 
+  async function handleSubmitForReview() {
+    if (!form.title.trim()) return
+    setSaving(true)
+    try {
+      const payload = {
+        title: form.title,
+        iconName: form.iconName,
+        description: form.description,
+        keyPoints: splitComma(form.keyPoints),
+        detailDescription: form.detailDescription,
+        scopeItems: splitComma(form.scopeItems),
+        relatedProjects: splitComma(form.relatedProjects),
+        isPublished: false,
+        status: 'draft' as ContentStatus,
+        sortOrder: Number(form.sortOrder) || 0,
+      }
+
+      let serviceId = editingId
+      if (editingId) {
+        await updateService(editingId, payload)
+      } else {
+        serviceId = await createService(payload)
+      }
+
+      await submitForReview('services', serviceId!, user?.uid ?? '')
+      await notifyManagers({
+        type: 'review_request',
+        contentType: 'service',
+        contentId: serviceId!,
+        contentTitle: form.title,
+        fromUserId: user?.uid ?? '',
+        fromUserName: appUser?.displayName ?? '员工',
+        message: `${appUser?.displayName ?? '员工'} 提交了服务「${form.title}」等待审核`,
+      })
+
+      if (editingId) {
+        setServices((prev) =>
+          prev.map((s) =>
+            s.id === editingId
+              ? { ...s, ...payload, status: 'pending_review' as ContentStatus }
+              : s,
+          ),
+        )
+      } else {
+        await fetchServices()
+      }
+      closeForm()
+      alert('已提交审核')
+    } catch (err) {
+      console.error('Failed to submit for review:', err)
+      setError('提交审核失败，请稍后重试')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handlePublishDirectly() {
+    if (!form.title.trim()) return
+    if (!window.confirm('确认发布此服务？发布后将在官网公开展示。')) return
+    setSaving(true)
+    try {
+      const payload = {
+        title: form.title,
+        iconName: form.iconName,
+        description: form.description,
+        keyPoints: splitComma(form.keyPoints),
+        detailDescription: form.detailDescription,
+        scopeItems: splitComma(form.scopeItems),
+        relatedProjects: splitComma(form.relatedProjects),
+        isPublished: true,
+        status: 'published' as ContentStatus,
+        sortOrder: Number(form.sortOrder) || 0,
+      }
+
+      if (editingId) {
+        await updateService(editingId, payload)
+        await publishDirectly('services', editingId, user?.uid ?? '')
+        setServices((prev) =>
+          prev.map((s) =>
+            s.id === editingId ? { ...s, ...payload } : s,
+          ),
+        )
+      } else {
+        const newId = await createService(payload)
+        await publishDirectly('services', newId, user?.uid ?? '')
+        const newService: Service = {
+          id: newId,
+          ...payload,
+          createdAt: { toDate: () => new Date() } as Service['createdAt'],
+          updatedAt: { toDate: () => new Date() } as Service['updatedAt'],
+        }
+        setServices((prev) => [...prev, newService])
+      }
+      closeForm()
+      alert('发布成功！')
+    } catch (err) {
+      console.error('Failed to publish service:', err)
+      setError('发布失败，请稍后重试')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleDelete(id: string) {
     try {
       await deleteService(id)
@@ -214,19 +345,112 @@ export default function ServiceManagePage() {
     }
   }
 
-  async function togglePublish(id: string) {
+  // List-level actions for Manager
+  async function handleListApprove(id: string) {
     const service = services.find((s) => s.id === id)
     if (!service) return
     try {
-      await updateService(id, { isPublished: !service.isPublished })
+      await approveContent('services', id, user?.uid ?? '')
+      if (service.submittedBy) {
+        await createNotification({
+          type: 'approved',
+          contentType: 'service',
+          contentId: id,
+          contentTitle: service.title,
+          fromUserId: user?.uid ?? '',
+          fromUserName: appUser?.displayName ?? '管理员',
+          toUserId: service.submittedBy,
+          message: `您的服务「${service.title}」已通过审核并发布`,
+        })
+      }
       setServices((prev) =>
-        prev.map((s) =>
-          s.id === id ? { ...s, isPublished: !s.isPublished } : s,
-        ),
+        prev.map((s) => s.id === id ? { ...s, status: 'published' as ContentStatus, isPublished: true } : s),
       )
+      alert('已通过审核并发布')
     } catch (err) {
-      console.error('Failed to toggle publish:', err)
-      setError('更新发布状态失败，请稍后重试')
+      alert('操作失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handleListReject(id: string) {
+    const service = services.find((s) => s.id === id)
+    if (!service) return
+    const reason = window.prompt('请输入退回原因：')
+    if (reason === null) return
+    if (!reason.trim()) { alert('请输入退回原因'); return }
+    try {
+      await rejectContent('services', id, user?.uid ?? '', reason)
+      if (service.submittedBy) {
+        await createNotification({
+          type: 'rejected',
+          contentType: 'service',
+          contentId: id,
+          contentTitle: service.title,
+          fromUserId: user?.uid ?? '',
+          fromUserName: appUser?.displayName ?? '管理员',
+          toUserId: service.submittedBy,
+          message: `您的服务「${service.title}」已被退回，原因：${reason}`,
+        })
+      }
+      setServices((prev) =>
+        prev.map((s) => s.id === id ? { ...s, status: 'rejected' as ContentStatus, isPublished: false, rejectionReason: reason } : s),
+      )
+      alert('已退回')
+    } catch (err) {
+      alert('操作失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handleListPublish(id: string) {
+    const service = services.find((s) => s.id === id)
+    if (!service) return
+    if (!window.confirm(`确认发布服务「${service.title}」？`)) return
+    try {
+      await publishDirectly('services', id, user?.uid ?? '')
+      setServices((prev) =>
+        prev.map((s) => s.id === id ? { ...s, status: 'published' as ContentStatus, isPublished: true } : s),
+      )
+      alert('已发布')
+    } catch (err) {
+      alert('发布失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handleListUnpublish(id: string) {
+    const service = services.find((s) => s.id === id)
+    if (!service) return
+    if (!window.confirm(`确认取消发布服务「${service.title}」？`)) return
+    try {
+      await unpublishContent('services', id)
+      setServices((prev) =>
+        prev.map((s) => s.id === id ? { ...s, status: 'draft' as ContentStatus, isPublished: false } : s),
+      )
+      alert('已取消发布')
+    } catch (err) {
+      alert('操作失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handleListSubmitReview(id: string) {
+    const service = services.find((s) => s.id === id)
+    if (!service) return
+    try {
+      await submitForReview('services', id, user?.uid ?? '')
+      await notifyManagers({
+        type: 'review_request',
+        contentType: 'service',
+        contentId: id,
+        contentTitle: service.title,
+        fromUserId: user?.uid ?? '',
+        fromUserName: appUser?.displayName ?? '员工',
+        message: `${appUser?.displayName ?? '员工'} 提交了服务「${service.title}」等待审核`,
+      })
+      setServices((prev) =>
+        prev.map((s) => s.id === id ? { ...s, status: 'pending_review' as ContentStatus, isPublished: false } : s),
+      )
+      alert('已提交审核')
+    } catch (err) {
+      alert('提交失败: ' + (err instanceof Error ? err.message : '未知错误'))
     }
   }
 
@@ -297,13 +521,13 @@ export default function ServiceManagePage() {
               className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-border focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors"
             />
           </div>
-          <div className="flex gap-2">
-            {PUBLISH_FILTER_OPTIONS.map((opt) => (
+          <div className="flex gap-2 flex-wrap">
+            {STATUS_FILTER_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setPublishFilter(opt.value)}
+                onClick={() => setStatusFilter(opt.value)}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  publishFilter === opt.value
+                  statusFilter === opt.value
                     ? 'bg-navy text-white'
                     : 'bg-bg-gray text-text-secondary hover:bg-gray-200'
                 }`}
@@ -319,9 +543,14 @@ export default function ServiceManagePage() {
       {showForm && (
         <div className="bg-white rounded-xl shadow-md border border-border p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-navy">
-              {editingId ? '编辑服务' : '新建服务'}
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold text-navy">
+                {editingId ? '编辑服务' : '新建服务'}
+              </h2>
+              {editingId && (
+                <ContentStatusBadge status={formContentStatus} />
+              )}
+            </div>
             <button
               onClick={closeForm}
               className="p-1.5 rounded-lg hover:bg-bg-gray transition-colors text-text-muted"
@@ -329,6 +558,25 @@ export default function ServiceManagePage() {
               <X className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Rejected Banner */}
+          {formContentStatus === 'rejected' && editingService?.rejectionReason && (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm mb-6">
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">内容已被退回</p>
+                <p className="mt-1">退回原因：{editingService.rejectionReason}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Pending review lockout */}
+          {isLockedForWorker && (
+            <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-xl px-4 py-3 text-sm mb-6">
+              <Info className="w-5 h-5 shrink-0 mt-0.5" />
+              <p>内容审核中，请等待管理员审核</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* 服务名称 */}
@@ -341,7 +589,8 @@ export default function ServiceManagePage() {
                 value={form.title}
                 onChange={(e) => updateField('title', e.target.value)}
                 placeholder="请输入服务名称"
-                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors"
+                disabled={isLockedForWorker}
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -357,7 +606,8 @@ export default function ServiceManagePage() {
                 <select
                   value={form.iconName}
                   onChange={(e) => updateField('iconName', e.target.value)}
-                  className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors bg-white"
+                  disabled={isLockedForWorker}
+                  className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
                 >
                   {ICON_NAMES.map((name) => (
                     <option key={name} value={name}>
@@ -378,7 +628,8 @@ export default function ServiceManagePage() {
                 onChange={(e) => updateField('description', e.target.value)}
                 placeholder="请输入服务简要描述"
                 rows={3}
-                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-none"
+                disabled={isLockedForWorker}
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -394,42 +645,45 @@ export default function ServiceManagePage() {
                 }
                 placeholder="请输入服务详细描述"
                 rows={5}
-                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-none"
+                disabled={isLockedForWorker}
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
             </div>
 
             {/* 核心要点 */}
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-text-primary mb-1.5">
-                核心要点 <span className="text-text-muted text-xs">（逗号分隔）</span>
+                核心要点 <span className="text-text-muted text-xs">(逗号分隔)</span>
               </label>
               <input
                 type="text"
                 value={form.keyPoints}
                 onChange={(e) => updateField('keyPoints', e.target.value)}
                 placeholder="投资估算，预算编制，结算审核"
-                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors"
+                disabled={isLockedForWorker}
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
             </div>
 
             {/* 服务范围 */}
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-text-primary mb-1.5">
-                服务范围 <span className="text-text-muted text-xs">（逗号分隔）</span>
+                服务范围 <span className="text-text-muted text-xs">(逗号分隔)</span>
               </label>
               <textarea
                 value={form.scopeItems}
                 onChange={(e) => updateField('scopeItems', e.target.value)}
                 placeholder="投资估算编制与审核，设计概算编制与审核，施工图预算编制与审核"
                 rows={3}
-                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-none"
+                disabled={isLockedForWorker}
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
             </div>
 
             {/* 相关项目 */}
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-text-primary mb-1.5">
-                相关项目 <span className="text-text-muted text-xs">（逗号分隔）</span>
+                相关项目 <span className="text-text-muted text-xs">(逗号分隔)</span>
               </label>
               <textarea
                 value={form.relatedProjects}
@@ -438,7 +692,8 @@ export default function ServiceManagePage() {
                 }
                 placeholder="项目名称1，项目名称2，项目名称3"
                 rows={2}
-                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-none"
+                disabled={isLockedForWorker}
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -452,32 +707,14 @@ export default function ServiceManagePage() {
                 value={form.sortOrder}
                 onChange={(e) => updateField('sortOrder', e.target.value)}
                 placeholder="0"
-                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors"
+                disabled={isLockedForWorker}
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:border-navy focus:ring-1 focus:ring-navy outline-none transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
-            </div>
-
-            {/* 发布状态 */}
-            <div className="flex items-end pb-1">
-              <div className="flex items-center gap-3">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.isPublished}
-                    onChange={(e) =>
-                      updateField('isPublished', e.target.checked)
-                    }
-                    className="sr-only peer"
-                  />
-                  <div className="w-10 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-navy/20 rounded-full peer peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-navy" />
-                </label>
-                <span className="text-sm text-text-primary">
-                  {form.isPublished ? '已发布' : '未发布'}
-                </span>
-              </div>
             </div>
           </div>
 
           {/* Actions */}
+          {!isLockedForWorker && (
           <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-border">
             <button
               onClick={closeForm}
@@ -485,19 +722,54 @@ export default function ServiceManagePage() {
             >
               取消
             </button>
-            <button
-              onClick={handleSave}
-              disabled={!form.title.trim() || saving}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-navy hover:bg-navy-dark rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {saving ? '保存中...' : '保存'}
-            </button>
+
+            {isWorker && (
+              <>
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={!form.title.trim() || saving}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-text-primary border border-border rounded-lg hover:bg-bg-gray transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-4 h-4" />
+                  {saving ? '保存中...' : '保存草稿'}
+                </button>
+                <button
+                  onClick={handleSubmitForReview}
+                  disabled={!form.title.trim() || saving}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gold hover:bg-gold-dark rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-4 h-4" />
+                  {saving ? '提交中...' : '提交审核'}
+                </button>
+              </>
+            )}
+
+            {isManager && (
+              <>
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={!form.title.trim() || saving}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-text-primary border border-border rounded-lg hover:bg-bg-gray transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-4 h-4" />
+                  {saving ? '保存中...' : '保存草稿'}
+                </button>
+                <button
+                  onClick={handlePublishDirectly}
+                  disabled={!form.title.trim() || saving}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-navy hover:bg-navy-dark rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                  {saving ? '发布中...' : '发布'}
+                </button>
+              </>
+            )}
           </div>
+          )}
         </div>
       )}
 
@@ -531,6 +803,7 @@ export default function ServiceManagePage() {
             <tbody className="divide-y divide-border">
               {filtered.map((service) => {
                 const Icon = getIcon(service.iconName)
+                const status = getContentStatus(service)
                 return (
                   <tr
                     key={service.id}
@@ -561,20 +834,10 @@ export default function ServiceManagePage() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      {service.isPublished ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded">
-                          <Eye className="w-3 h-3" />
-                          已发布
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-text-muted bg-gray-100 px-2 py-0.5 rounded">
-                          <EyeOff className="w-3 h-3" />
-                          未发布
-                        </span>
-                      )}
+                      <ContentStatusBadge status={status} />
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1 flex-wrap">
                         <button
                           onClick={() => openEditForm(service)}
                           className="p-1.5 rounded-lg text-text-muted hover:text-navy hover:bg-navy/10 transition-colors"
@@ -582,44 +845,86 @@ export default function ServiceManagePage() {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => togglePublish(service.id)}
-                          className="p-1.5 rounded-lg text-text-muted hover:text-teal hover:bg-teal/10 transition-colors"
-                          title={
-                            service.isPublished ? '取消发布' : '发布'
-                          }
-                        >
-                          {service.isPublished ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </button>
-                        {deleteConfirmId === service.id ? (
-                          <div className="flex items-center gap-1 ml-1">
-                            <button
-                              onClick={() => handleDelete(service.id)}
-                              className="px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
-                            >
-                              确认
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="px-2 py-1 text-xs font-medium text-text-secondary bg-bg-gray hover:bg-gray-200 rounded transition-colors"
-                            >
-                              取消
-                            </button>
-                          </div>
-                        ) : (
+
+                        {/* Worker actions */}
+                        {isWorker && (status === 'draft' || status === 'rejected') && (
                           <button
-                            onClick={() =>
-                              setDeleteConfirmId(service.id)
-                            }
-                            className="p-1.5 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors"
-                            title="删除"
+                            onClick={() => handleListSubmitReview(service.id)}
+                            className="p-1.5 rounded-lg text-text-muted hover:text-gold-dark hover:bg-gold/10 transition-colors"
+                            title="提交审核"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Send className="w-4 h-4" />
                           </button>
+                        )}
+
+                        {/* Manager actions */}
+                        {isManager && status === 'pending_review' && (
+                          <>
+                            <button
+                              onClick={() => handleListApprove(service.id)}
+                              className="p-1.5 rounded-lg text-text-muted hover:text-green-600 hover:bg-green-50 transition-colors"
+                              title="通过"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleListReject(service.id)}
+                              className="p-1.5 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+                              title="退回"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {isManager && status === 'draft' && (
+                          <button
+                            onClick={() => handleListPublish(service.id)}
+                            className="p-1.5 rounded-lg text-text-muted hover:text-green-600 hover:bg-green-50 transition-colors"
+                            title="发布"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
+                        {isManager && status === 'published' && (
+                          <button
+                            onClick={() => handleListUnpublish(service.id)}
+                            className="p-1.5 rounded-lg text-text-muted hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                            title="取消发布"
+                          >
+                            <Ban className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {/* Delete */}
+                        {(isManager || (isWorker && (status === 'draft' || status === 'rejected'))) && (
+                          <>
+                            {deleteConfirmId === service.id ? (
+                              <div className="flex items-center gap-1 ml-1">
+                                <button
+                                  onClick={() => handleDelete(service.id)}
+                                  className="px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
+                                >
+                                  确认
+                                </button>
+                                <button
+                                  onClick={() => setDeleteConfirmId(null)}
+                                  className="px-2 py-1 text-xs font-medium text-text-secondary bg-bg-gray hover:bg-gray-200 rounded transition-colors"
+                                >
+                                  取消
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  setDeleteConfirmId(service.id)
+                                }
+                                className="p-1.5 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+                                title="删除"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
@@ -634,6 +939,7 @@ export default function ServiceManagePage() {
         <div className="md:hidden divide-y divide-border">
           {filtered.map((service) => {
             const Icon = getIcon(service.iconName)
+            const status = getContentStatus(service)
             return (
               <div key={service.id} className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
@@ -650,17 +956,7 @@ export default function ServiceManagePage() {
                       </p>
                     </div>
                   </div>
-                  {service.isPublished ? (
-                    <span className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded">
-                      <Eye className="w-3 h-3" />
-                      已发布
-                    </span>
-                  ) : (
-                    <span className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-text-muted bg-gray-100 px-2 py-0.5 rounded">
-                      <EyeOff className="w-3 h-3" />
-                      未发布
-                    </span>
-                  )}
+                  <ContentStatusBadge status={status} />
                 </div>
                 <p className="text-xs text-text-secondary line-clamp-2">
                   {service.description}
@@ -672,38 +968,75 @@ export default function ServiceManagePage() {
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => togglePublish(service.id)}
-                    className="p-1.5 rounded-lg text-text-muted hover:text-teal hover:bg-teal/10 transition-colors"
-                  >
-                    {service.isPublished ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                  {deleteConfirmId === service.id ? (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleDelete(service.id)}
-                        className="px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
-                      >
-                        确认
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirmId(null)}
-                        className="px-2 py-1 text-xs font-medium text-text-secondary bg-bg-gray hover:bg-gray-200 rounded transition-colors"
-                      >
-                        取消
-                      </button>
-                    </div>
-                  ) : (
+
+                  {isWorker && (status === 'draft' || status === 'rejected') && (
                     <button
-                      onClick={() => setDeleteConfirmId(service.id)}
-                      className="p-1.5 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+                      onClick={() => handleListSubmitReview(service.id)}
+                      className="p-1.5 rounded-lg text-text-muted hover:text-gold-dark hover:bg-gold/10 transition-colors"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Send className="w-4 h-4" />
                     </button>
+                  )}
+
+                  {isManager && status === 'pending_review' && (
+                    <>
+                      <button
+                        onClick={() => handleListApprove(service.id)}
+                        className="p-1.5 rounded-lg text-text-muted hover:text-green-600 hover:bg-green-50 transition-colors"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleListReject(service.id)}
+                        className="p-1.5 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                  {isManager && status === 'draft' && (
+                    <button
+                      onClick={() => handleListPublish(service.id)}
+                      className="p-1.5 rounded-lg text-text-muted hover:text-green-600 hover:bg-green-50 transition-colors"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                  )}
+                  {isManager && status === 'published' && (
+                    <button
+                      onClick={() => handleListUnpublish(service.id)}
+                      className="p-1.5 rounded-lg text-text-muted hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                    >
+                      <Ban className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {(isManager || (isWorker && (status === 'draft' || status === 'rejected'))) && (
+                    <>
+                      {deleteConfirmId === service.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleDelete(service.id)}
+                            className="px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
+                          >
+                            确认
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="px-2 py-1 text-xs font-medium text-text-secondary bg-bg-gray hover:bg-gray-200 rounded transition-colors"
+                          >
+                            取消
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteConfirmId(service.id)}
+                          className="p-1.5 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

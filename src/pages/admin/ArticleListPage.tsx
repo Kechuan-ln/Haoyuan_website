@@ -1,9 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Edit2, Trash2, Eye, EyeOff, FileText, Loader2, RefreshCw } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, FileText, Loader2, RefreshCw, Send, Check, X as XIcon, Ban } from 'lucide-react'
 import { ROUTES } from '@/config/routes'
-import { getArticles, updateArticle, deleteArticle } from '@/services/articles.service'
+import { getArticles, deleteArticle } from '@/services/articles.service'
+import { submitForReview, approveContent, rejectContent, publishDirectly, unpublishContent } from '@/services/workflow.service'
+import { notifyManagers, createNotification } from '@/services/notifications.service'
+import { useAuth } from '@/contexts/AuthContext'
+import ContentStatusBadge from '@/components/shared/ContentStatusBadge'
 import type { Article, ArticleCategory } from '@/types/article'
+import type { ContentStatus } from '@/types/content-status'
 import type { Timestamp } from 'firebase/firestore'
 
 const CATEGORY_TABS: { value: string; label: string }[] = [
@@ -16,8 +21,10 @@ const CATEGORY_TABS: { value: string; label: string }[] = [
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: '全部' },
-  { value: 'published', label: '已发布' },
   { value: 'draft', label: '草稿' },
+  { value: 'pending_review', label: '待审核' },
+  { value: 'published', label: '已发布' },
+  { value: 'rejected', label: '已退回' },
 ]
 
 const CATEGORY_BADGE_MAP: Record<ArticleCategory, { label: string; className: string }> = {
@@ -33,7 +40,13 @@ function formatDisplayDate(ts: Timestamp | null): string {
   return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日`
 }
 
+function getContentStatus(article: Article): ContentStatus {
+  return article.status ?? (article.isPublished ? 'published' : 'draft')
+}
+
 export default function ArticleListPage() {
+  const { user, appUser, isManager, isWorker } = useAuth()
+
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -63,10 +76,8 @@ export default function ArticleListPage() {
       if (activeCategory !== 'all' && article.category !== activeCategory) {
         return false
       }
-      if (statusFilter === 'published' && !article.isPublished) {
-        return false
-      }
-      if (statusFilter === 'draft' && article.isPublished) {
+      const status = getContentStatus(article)
+      if (statusFilter !== 'all' && status !== statusFilter) {
         return false
       }
       if (searchQuery && !article.title.includes(searchQuery)) {
@@ -75,19 +86,6 @@ export default function ArticleListPage() {
       return true
     })
   }, [articles, activeCategory, statusFilter, searchQuery])
-
-  async function handleTogglePublish(id: string) {
-    const article = articles.find((a) => a.id === id)
-    if (!article) return
-    try {
-      await updateArticle(id, { isPublished: !article.isPublished })
-      setArticles((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, isPublished: !a.isPublished } : a)),
-      )
-    } catch (err) {
-      alert('操作失败: ' + (err instanceof Error ? err.message : '未知错误'))
-    }
-  }
 
   async function handleDelete(id: string) {
     const article = articles.find((a) => a.id === id)
@@ -98,6 +96,117 @@ export default function ArticleListPage() {
       setArticles((prev) => prev.filter((a) => a.id !== id))
     } catch (err) {
       alert('删除失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handleSubmitForReview(id: string) {
+    const article = articles.find((a) => a.id === id)
+    if (!article) return
+    try {
+      await submitForReview('articles', id, user?.uid ?? '')
+      await notifyManagers({
+        type: 'review_request',
+        contentType: 'article',
+        contentId: id,
+        contentTitle: article.title,
+        fromUserId: user?.uid ?? '',
+        fromUserName: appUser?.displayName ?? '员工',
+        message: `${appUser?.displayName ?? '员工'} 提交了文章「${article.title}」等待审核`,
+      })
+      setArticles((prev) =>
+        prev.map((a) => a.id === id ? { ...a, status: 'pending_review' as ContentStatus, isPublished: false } : a),
+      )
+      alert('已提交审核')
+    } catch (err) {
+      alert('提交失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handleApprove(id: string) {
+    const article = articles.find((a) => a.id === id)
+    if (!article) return
+    try {
+      await approveContent('articles', id, user?.uid ?? '')
+      if (article.submittedBy) {
+        await createNotification({
+          type: 'approved',
+          contentType: 'article',
+          contentId: id,
+          contentTitle: article.title,
+          fromUserId: user?.uid ?? '',
+          fromUserName: appUser?.displayName ?? '管理员',
+          toUserId: article.submittedBy,
+          message: `您的文章「${article.title}」已通过审核并发布`,
+        })
+      }
+      setArticles((prev) =>
+        prev.map((a) => a.id === id ? { ...a, status: 'published' as ContentStatus, isPublished: true } : a),
+      )
+      alert('已通过审核并发布')
+    } catch (err) {
+      alert('操作失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handleReject(id: string) {
+    const article = articles.find((a) => a.id === id)
+    if (!article) return
+    const reason = window.prompt('请输入退回原因：')
+    if (reason === null) return
+    if (!reason.trim()) {
+      alert('请输入退回原因')
+      return
+    }
+    try {
+      await rejectContent('articles', id, user?.uid ?? '', reason)
+      if (article.submittedBy) {
+        await createNotification({
+          type: 'rejected',
+          contentType: 'article',
+          contentId: id,
+          contentTitle: article.title,
+          fromUserId: user?.uid ?? '',
+          fromUserName: appUser?.displayName ?? '管理员',
+          toUserId: article.submittedBy,
+          message: `您的文章「${article.title}」已被退回，原因：${reason}`,
+        })
+      }
+      setArticles((prev) =>
+        prev.map((a) => a.id === id ? { ...a, status: 'rejected' as ContentStatus, isPublished: false, rejectionReason: reason } : a),
+      )
+      alert('已退回')
+    } catch (err) {
+      alert('操作失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handlePublishDirectly(id: string) {
+    const article = articles.find((a) => a.id === id)
+    if (!article) return
+    if (!window.confirm(`确认发布文章「${article.title}」？`)) return
+    try {
+      await publishDirectly('articles', id, user?.uid ?? '')
+      setArticles((prev) =>
+        prev.map((a) => a.id === id ? { ...a, status: 'published' as ContentStatus, isPublished: true } : a),
+      )
+      alert('已发布')
+    } catch (err) {
+      alert('发布失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handleUnpublish(id: string) {
+    const article = articles.find((a) => a.id === id)
+    if (!article) return
+    if (!window.confirm(`确认取消发布文章「${article.title}」？`)) return
+    try {
+      await unpublishContent('articles', id)
+      setArticles((prev) =>
+        prev.map((a) => a.id === id ? { ...a, status: 'draft' as ContentStatus, isPublished: false } : a),
+      )
+      alert('已取消发布')
+    } catch (err) {
+      alert('操作失败: ' + (err instanceof Error ? err.message : '未知错误'))
     }
   }
 
@@ -139,7 +248,7 @@ export default function ArticleListPage() {
 
         {/* Status Filter + Search */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {STATUS_FILTERS.map((filter) => (
               <button
                 key={filter.value}
@@ -224,6 +333,7 @@ export default function ArticleListPage() {
               <tbody className="divide-y divide-border">
                 {filteredArticles.map((article) => {
                   const badge = CATEGORY_BADGE_MAP[article.category]
+                  const status = getContentStatus(article)
                   return (
                     <tr key={article.id} className="hover:bg-bg-gray/30 transition-colors">
                       <td className="px-6 py-4">
@@ -244,27 +354,7 @@ export default function ArticleListPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleTogglePublish(article.id)}
-                          className="group inline-flex items-center gap-1.5"
-                          title={article.isPublished ? '点击取消发布' : '点击发布'}
-                        >
-                          {article.isPublished ? (
-                            <>
-                              <Eye className="w-3.5 h-3.5 text-green-600" />
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 group-hover:bg-green-100 transition-colors">
-                                已发布
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="w-3.5 h-3.5 text-text-muted" />
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-text-secondary group-hover:bg-gray-200 transition-colors">
-                                草稿
-                              </span>
-                            </>
-                          )}
-                        </button>
+                        <ContentStatusBadge status={status} />
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-text-secondary">
@@ -272,7 +362,8 @@ export default function ArticleListPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {/* Edit button - always visible */}
                           <Link
                             to={`/admin/articles/${article.id}/edit`}
                             className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-navy hover:bg-navy/5 transition-colors"
@@ -280,13 +371,75 @@ export default function ArticleListPage() {
                             <Edit2 className="w-3.5 h-3.5" />
                             编辑
                           </Link>
-                          <button
-                            onClick={() => handleDelete(article.id)}
-                            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            删除
-                          </button>
+
+                          {/* Worker actions */}
+                          {isWorker && (status === 'draft' || status === 'rejected') && (
+                            <>
+                              <button
+                                onClick={() => handleSubmitForReview(article.id)}
+                                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-gold-dark hover:bg-gold/10 transition-colors"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                提交审核
+                              </button>
+                              <button
+                                onClick={() => handleDelete(article.id)}
+                                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                删除
+                              </button>
+                            </>
+                          )}
+
+                          {/* Manager actions */}
+                          {isManager && (
+                            <>
+                              {status === 'pending_review' && (
+                                <>
+                                  <button
+                                    onClick={() => handleApprove(article.id)}
+                                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-50 transition-colors"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    通过
+                                  </button>
+                                  <button
+                                    onClick={() => handleReject(article.id)}
+                                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                                  >
+                                    <XIcon className="w-3.5 h-3.5" />
+                                    退回
+                                  </button>
+                                </>
+                              )}
+                              {status === 'draft' && (
+                                <button
+                                  onClick={() => handlePublishDirectly(article.id)}
+                                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-50 transition-colors"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  发布
+                                </button>
+                              )}
+                              {status === 'published' && (
+                                <button
+                                  onClick={() => handleUnpublish(article.id)}
+                                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-amber-600 hover:bg-amber-50 transition-colors"
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                  取消发布
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDelete(article.id)}
+                                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                删除
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

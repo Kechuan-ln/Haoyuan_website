@@ -13,12 +13,14 @@ import {
 import type { UpdateData } from 'firebase/firestore'
 import { requireDb } from '@/config/firebase'
 import type { Project } from '@/types/project'
+import type { ContentStatus } from '@/types/content-status'
 
 const PROJECTS = 'projects'
 
 export interface ProjectFilters {
   category?: string
   isPublished?: boolean
+  status?: ContentStatus
 }
 
 export async function getProjects(filters?: ProjectFilters): Promise<Project[]> {
@@ -29,6 +31,9 @@ export async function getProjects(filters?: ProjectFilters): Promise<Project[]> 
   }
   if (filters?.isPublished !== undefined) {
     constraints.push(where('isPublished', '==', filters.isPublished))
+  }
+  if (filters?.status) {
+    constraints.push(where('status', '==', filters.status))
   }
   const q = query(collection(db, PROJECTS), ...constraints)
   const snap = await getDocs(q)
@@ -48,6 +53,7 @@ export async function createProject(
   const db = requireDb()
   const ref = await addDoc(collection(db, PROJECTS), {
     ...data,
+    status: 'draft' as ContentStatus,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
