@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Database,
 } from 'lucide-react'
 import {
   getQualifications,
@@ -17,6 +18,7 @@ import {
   updateQualification,
   deleteQualification,
 } from '@/services/qualifications.service'
+import { DEFAULT_QUALIFICATIONS } from '@/config/qualification-defaults'
 import { getIcon, ICON_MAP } from '@/config/icon-map'
 import type { Qualification } from '@/types/qualification'
 
@@ -59,6 +61,7 @@ export default function QualificationsManagePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [seeding, setSeeding] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [publishFilter, setPublishFilter] = useState<'all' | 'published' | 'unpublished'>('all')
@@ -193,6 +196,20 @@ export default function QualificationsManagePage() {
     }
   }
 
+  async function handleSeedDefaults() {
+    setSeeding(true)
+    try {
+      for (const qual of DEFAULT_QUALIFICATIONS) {
+        await createQualification(qual)
+      }
+      await fetchQualifications()
+    } catch (err) {
+      console.error('Failed to seed qualifications:', err)
+    } finally {
+      setSeeding(false)
+    }
+  }
+
   /* ---- Render ---- */
 
   return (
@@ -313,9 +330,23 @@ export default function QualificationsManagePage() {
               </div>
             )
           })}
-          {filtered.length === 0 && (
+          {filtered.length === 0 && qualifications.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center py-20 text-text-muted">
+              <Database className="w-12 h-12 mb-4 text-text-muted/50" />
+              <p className="text-sm mb-4">暂无资质数据</p>
+              <button
+                onClick={handleSeedDefaults}
+                disabled={seeding}
+                className="inline-flex items-center gap-2 rounded-lg bg-navy px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy/90 transition-colors disabled:opacity-60"
+              >
+                {seeding && <Loader2 className="w-4 h-4 animate-spin" />}
+                初始化默认资质数据
+              </button>
+            </div>
+          )}
+          {filtered.length === 0 && qualifications.length > 0 && (
             <div className="col-span-full text-center py-20 text-text-muted text-sm">
-              暂无资质数据
+              没有匹配的资质
             </div>
           )}
         </div>

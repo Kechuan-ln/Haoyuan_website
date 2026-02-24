@@ -11,13 +11,16 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowRight,
+  Loader2,
 } from 'lucide-react'
 import { ROUTES } from '@/config/routes'
 import { isFirebaseConfigured } from '@/config/firebase'
 import { getArticles } from '@/services/articles.service'
 import { getProjects } from '@/services/projects.service'
-import { getContacts } from '@/services/contacts.service'
+import { getLatestProjects } from '@/services/projects.service'
+import { getContacts, getLatestContacts } from '@/services/contacts.service'
 import { listUsers } from '@/services/users.service'
+import { formatRelativeTime } from '@/utils/format'
 
 /* ---------- Static Data ---------- */
 
@@ -52,45 +55,6 @@ const QUICK_ACTIONS = [
   },
 ]
 
-interface ActivityItem {
-  tag: string
-  tagColor: string
-  text: string
-  time: string
-}
-
-const RECENT_ACTIVITIES: ActivityItem[] = [
-  {
-    tag: '文章',
-    tagColor: 'bg-navy/10 text-navy',
-    text: '发布了文章「全程创优荣获AAAA级标准化工地认证」',
-    time: '2小时前',
-  },
-  {
-    tag: '留言',
-    tagColor: 'bg-gold/10 text-gold-dark',
-    text: '收到新留言来自「张先生」',
-    time: '5小时前',
-  },
-  {
-    tag: '业绩',
-    tagColor: 'bg-teal/10 text-teal',
-    text: '更新了项目「福永人民医院消化内镜中心改造工程」',
-    time: '1天前',
-  },
-  {
-    tag: '用户',
-    tagColor: 'bg-green-50 text-green-700',
-    text: '新供应商注册「深圳XX建设有限公司」',
-    time: '2天前',
-  },
-  {
-    tag: '系统',
-    tagColor: 'bg-gray-100 text-gray-600',
-    text: '系统备份完成',
-    time: '3天前',
-  },
-]
 
 /* ---------- Helpers ---------- */
 
@@ -115,6 +79,10 @@ export default function AdminDashboardPage() {
     users: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [activities, setActivities] = useState<
+    { tag: string; tagColor: string; text: string; time: string; sortTime: number }[]
+  >([])
+  const [activitiesLoading, setActivitiesLoading] = useState(true)
 
   useEffect(() => {
     async function loadStats() {
@@ -139,6 +107,53 @@ export default function AdminDashboardPage() {
       }
     }
     loadStats()
+  }, [])
+
+  useEffect(() => {
+    async function loadActivities() {
+      try {
+        const [articlesResult, contacts, projects] = await Promise.all([
+          getArticles({ pageSize: 3 }).catch(() => ({ articles: [] as never[] })),
+          getLatestContacts(3).catch(() => []),
+          getLatestProjects(3).catch(() => []),
+        ])
+
+        const articleItems = articlesResult.articles.map((a) => ({
+          tag: '文章',
+          tagColor: 'bg-navy/10 text-navy',
+          text: `发布了文章「${a.title}」`,
+          time: formatRelativeTime(a.publishedAt ?? a.createdAt),
+          sortTime: (a.publishedAt ?? a.createdAt).toDate().getTime(),
+        }))
+
+        const contactItems = contacts.map((c) => ({
+          tag: '留言',
+          tagColor: 'bg-gold/10 text-gold-dark',
+          text: `收到新留言来自「${c.name}」`,
+          time: formatRelativeTime(c.createdAt),
+          sortTime: c.createdAt.toDate().getTime(),
+        }))
+
+        const projectItems = projects.map((p) => ({
+          tag: '业绩',
+          tagColor: 'bg-teal/10 text-teal',
+          text: `更新了项目「${p.title}」`,
+          time: formatRelativeTime(p.createdAt),
+          sortTime: p.createdAt.toDate().getTime(),
+        }))
+
+        const merged = [...articleItems, ...contactItems, ...projectItems]
+          .sort((a, b) => b.sortTime - a.sortTime)
+          .slice(0, 5)
+
+        setActivities(merged)
+      } catch {
+        // Activities will stay empty
+      } finally {
+        setActivitiesLoading(false)
+      }
+    }
+    loadActivities()
   }, [])
 
   const statsCards = [
@@ -265,26 +280,36 @@ export default function AdminDashboardPage() {
             <Clock className="w-5 h-5 text-text-muted" />
             <h2 className="text-lg font-bold text-navy">最近动态</h2>
           </div>
-          <div className="space-y-4">
-            {RECENT_ACTIVITIES.map((activity, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-3 pb-4 border-b border-border last:border-b-0 last:pb-0"
-              >
-                <span
-                  className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded ${activity.tagColor}`}
+          {activitiesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 text-text-muted animate-spin" />
+            </div>
+          ) : activities.length === 0 ? (
+            <p className="text-sm text-text-muted text-center py-8">
+              暂无最新动态
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {activities.map((activity, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 pb-4 border-b border-border last:border-b-0 last:pb-0"
                 >
-                  {activity.tag}
-                </span>
-                <p className="text-sm text-text-primary flex-1 leading-relaxed">
-                  {activity.text}
-                </p>
-                <span className="shrink-0 text-xs text-text-muted whitespace-nowrap">
-                  {activity.time}
-                </span>
-              </div>
-            ))}
-          </div>
+                  <span
+                    className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded ${activity.tagColor}`}
+                  >
+                    {activity.tag}
+                  </span>
+                  <p className="text-sm text-text-primary flex-1 leading-relaxed">
+                    {activity.text}
+                  </p>
+                  <span className="shrink-0 text-xs text-text-muted whitespace-nowrap">
+                    {activity.time}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
