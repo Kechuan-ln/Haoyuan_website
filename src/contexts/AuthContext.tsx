@@ -4,7 +4,7 @@ import type { User } from 'firebase/auth'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db, isFirebaseConfigured } from '@/config/firebase'
-import type { AppUser } from '@/types/user'
+import type { AccountStatus, AppUser } from '@/types/user'
 
 interface AuthContextValue {
   user: User | null
@@ -13,6 +13,8 @@ interface AuthContextValue {
   error: string | null
   isManager: boolean
   isWorker: boolean
+  accountStatus: AccountStatus
+  isPendingApproval: boolean
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -22,6 +24,8 @@ const AuthContext = createContext<AuthContextValue>({
   error: null,
   isManager: false,
   isWorker: false,
+  accountStatus: 'active',
+  isPendingApproval: false,
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -75,9 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     appUser?.role === 'admin' && (appUser?.adminLevel ?? 'manager') === 'manager'
   const isWorker =
     appUser?.role === 'admin' && appUser?.adminLevel === 'worker'
+  const accountStatus: AccountStatus = appUser?.accountStatus ?? 'active'
+  const isPendingApproval = accountStatus === 'pending_approval'
 
   return (
-    <AuthContext.Provider value={{ user, appUser, loading, error, isManager, isWorker }}>
+    <AuthContext.Provider value={{ user, appUser, loading, error, isManager, isWorker, accountStatus, isPendingApproval }}>
       {children}
     </AuthContext.Provider>
   )

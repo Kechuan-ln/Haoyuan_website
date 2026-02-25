@@ -27,6 +27,7 @@ const BidDetailPage = lazy(() => import('@/pages/bidding/BidDetailPage'))
 // ---------- Auth pages ----------
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'))
+const AccountPendingPage = lazy(() => import('@/pages/auth/AccountPendingPage'))
 
 // ---------- Vendor pages ----------
 const VendorDashboardPage = lazy(() => import('@/pages/vendor/VendorDashboardPage'))
@@ -90,6 +91,7 @@ function App() {
           {/* Auth routes (no layout) */}
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
+          <Route path="account-pending" element={<AccountPendingPage />} />
 
           {/* Vendor routes under PortalLayout, protected for vendor role */}
           <Route element={<ProtectedRoute allowedRoles={['vendor']} />}>

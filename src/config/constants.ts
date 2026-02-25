@@ -79,3 +79,9 @@ export const ADMIN_LEVELS = [
   { value: 'manager', label: '经理' },
   { value: 'worker', label: '员工' },
 ] as const
+
+export const ACCOUNT_STATUSES = [
+  { value: 'active', label: '正常', color: 'green' },
+  { value: 'pending_approval', label: '待审批', color: 'yellow' },
+  { value: 'suspended', label: '已停用', color: 'red' },
+] as const

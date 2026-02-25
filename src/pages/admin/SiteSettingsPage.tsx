@@ -12,10 +12,17 @@ import {
   MapPin,
   Clock,
   Loader2,
+  Shield,
+  Eye,
+  EyeOff,
+  Copy,
+  RefreshCw,
+  Check,
 } from 'lucide-react'
 import type { HeroSlide } from '@/types/contact'
 import { COMPANY } from '@/config/constants'
 import { getSiteSettings, updateSiteSettings } from '@/services/site-settings.service'
+import { getManagerInviteCode, regenerateInviteCode } from '@/services/security-code.service'
 import ImageUploader from '@/components/shared/ImageUploader'
 
 /* ---------- Types ---------- */
@@ -72,10 +79,20 @@ export default function SiteSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
 
+  // Security code state
+  const [inviteCode, setInviteCode] = useState('')
+  const [codeUpdatedAt, setCodeUpdatedAt] = useState<unknown>(null)
+  const [showCode, setShowCode] = useState(false)
+  const [codeCopied, setCodeCopied] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+
   useEffect(() => {
     async function load() {
       try {
-        const data = await getSiteSettings()
+        const [data, codeData] = await Promise.all([
+          getSiteSettings(),
+          getManagerInviteCode().catch(() => null),
+        ])
         if (data) {
           setSettings({
             companyName: data.companyName || COMPANY.name,
@@ -89,6 +106,10 @@ export default function SiteSettingsPage() {
             siteDescription: data.siteDescription || DEFAULT_SETTINGS.siteDescription,
             siteKeywords: data.siteKeywords || DEFAULT_SETTINGS.siteKeywords,
           })
+        }
+        if (codeData) {
+          setInviteCode(codeData.code)
+          setCodeUpdatedAt(codeData.updatedAt)
         }
       } catch {
         // Keep default values from COMPANY constant
@@ -161,6 +182,39 @@ export default function SiteSettingsPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  async function handleCopyCode() {
+    if (!inviteCode) return
+    await navigator.clipboard.writeText(inviteCode)
+    setCodeCopied(true)
+    setTimeout(() => setCodeCopied(false), 2000)
+  }
+
+  async function handleRegenerateCode() {
+    const confirmed = window.confirm('确定要重新生成邀请码吗？旧邀请码将立即失效。')
+    if (!confirmed) return
+    setRegenerating(true)
+    try {
+      const newCode = await regenerateInviteCode()
+      setInviteCode(newCode)
+      setCodeUpdatedAt(new Date())
+    } catch (err) {
+      alert('生成失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  function formatCodeUpdatedTime(): string {
+    if (!codeUpdatedAt) return '未知'
+    if (codeUpdatedAt instanceof Date) {
+      return codeUpdatedAt.toLocaleString('zh-CN')
+    }
+    if (typeof codeUpdatedAt === 'object' && 'toDate' in codeUpdatedAt) {
+      return (codeUpdatedAt as { toDate: () => Date }).toDate().toLocaleString('zh-CN')
+    }
+    return '未知'
   }
 
   function handleReset() {
@@ -408,7 +462,87 @@ export default function SiteSettingsPage() {
         </div>
       </div>
 
-      {/* Section C: SEO 设置 */}
+      {/* Section C: 安全设置 */}
+      <div className="bg-white rounded-xl shadow-md border border-border p-6">
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
+          <Shield className="w-5 h-5 text-navy" />
+          <h2 className="text-lg font-bold text-navy">安全设置</h2>
+        </div>
+
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">
+              高级管理员邀请码
+            </label>
+            <p className="text-xs text-text-muted mb-3">
+              新的高级管理员注册时需要输入此邀请码。请妥善保管，仅分享给可信任的人员。
+            </p>
+
+            {inviteCode ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 rounded-lg border border-border bg-bg-gray/50 px-4 py-2.5 font-mono text-sm tracking-wider">
+                    {showCode ? inviteCode : '••••••••'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCode(!showCode)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2.5 text-sm text-text-secondary hover:bg-bg-gray transition-colors"
+                    title={showCode ? '隐藏' : '显示'}
+                  >
+                    {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyCode}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2.5 text-sm text-text-secondary hover:bg-bg-gray transition-colors"
+                    title="复制"
+                  >
+                    {codeCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-text-muted">
+                    上次更新: {formatCodeUpdatedTime()}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRegenerateCode}
+                    disabled={regenerating}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    {regenerating ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    )}
+                    重新生成
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6 rounded-lg border border-dashed border-border">
+                <p className="text-sm text-text-muted mb-3">尚未生成邀请码</p>
+                <button
+                  type="button"
+                  onClick={handleRegenerateCode}
+                  disabled={regenerating}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy/90 transition-colors disabled:opacity-50"
+                >
+                  {regenerating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Shield className="w-4 h-4" />
+                  )}
+                  生成邀请码
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Section D: SEO 设置 */}
       <div className="bg-white rounded-xl shadow-md border border-border p-6">
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
           <Globe className="w-5 h-5 text-navy" />

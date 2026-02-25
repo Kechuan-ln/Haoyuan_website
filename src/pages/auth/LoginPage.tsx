@@ -44,6 +44,12 @@ export default function LoginPage() {
     if (appUser) {
       setPendingRedirect(false)
       setLoading(false)
+      // Check admin account status
+      const status = appUser.accountStatus ?? 'active'
+      if (appUser.role === 'admin' && status !== 'active') {
+        navigate(ROUTES.ACCOUNT_PENDING)
+        return
+      }
       if (appUser.role === 'admin') {
         navigate(ROUTES.ADMIN)
       } else if (appUser.role === 'vendor') {

@@ -12,21 +12,37 @@ import {
   Ban,
   Loader2,
   AlertCircle,
+  ClipboardCheck,
 } from 'lucide-react'
-import type { AdminLevel, UserRole, VendorStatus } from '@/types/user'
+import type { AdminLevel, UserRole, VendorStatus, AccountStatus } from '@/types/user'
 import type { AppUser } from '@/types/user'
 import { useAuth } from '@/contexts/AuthContext'
-import { listUsers, approveVendor, rejectVendor, updateUserAdminLevel } from '@/services/users.service'
+import {
+  listUsers,
+  approveVendor,
+  rejectVendor,
+  updateUserAdminLevel,
+  listPendingAdminApplications,
+  updateAccountStatus,
+} from '@/services/users.service'
+import { notifyAccountStatus } from '@/services/notifications.service'
 import { ADMIN_LEVELS } from '@/config/constants'
 
 /* ---------- Constants ---------- */
 
 const ROLE_TABS: { value: string; label: string; icon: typeof Shield }[] = [
   { value: 'all', label: '全部', icon: Users },
+  { value: 'pending_approval', label: '待审批', icon: ClipboardCheck },
   { value: 'admin', label: '管理员', icon: Shield },
   { value: 'vendor', label: '供应商', icon: Truck },
   { value: 'reviewer', label: '评审专家', icon: Star },
 ]
+
+const ACCOUNT_STATUS_BADGE_MAP: Record<AccountStatus, { label: string; className: string }> = {
+  active: { label: '正常', className: 'bg-green-100 text-green-700' },
+  pending_approval: { label: '待审批', className: 'bg-yellow-100 text-yellow-700' },
+  suspended: { label: '已停用', className: 'bg-red-100 text-red-700' },
+}
 
 const VENDOR_STATUS_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: '全部' },
@@ -73,8 +89,10 @@ function formatTimestamp(ts: unknown): string {
 /* ---------- Component ---------- */
 
 export default function UserManagePage() {
-  const { isManager } = useAuth()
+  const { isManager, appUser } = useAuth()
   const [users, setUsers] = useState<AppUser[]>([])
+  const [pendingUsers, setPendingUsers] = useState<AppUser[]>([])
+  const [pendingCount, setPendingCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeRole, setActiveRole] = useState('all')
@@ -95,9 +113,20 @@ export default function UserManagePage() {
     }
   }, [])
 
+  const fetchPending = useCallback(async () => {
+    try {
+      const data = await listPendingAdminApplications()
+      setPendingUsers(data)
+      setPendingCount(data.length)
+    } catch {
+      // Silently fail — pending count is non-critical
+    }
+  }, [])
+
   useEffect(() => {
     fetchUsers()
-  }, [fetchUsers])
+    fetchPending()
+  }, [fetchUsers, fetchPending])
 
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
@@ -154,6 +183,44 @@ export default function UserManagePage() {
     }
   }
 
+  async function handleApproveAdmin(uid: string) {
+    try {
+      await updateAccountStatus(uid, 'active')
+      if (appUser) {
+        await notifyAccountStatus(uid, true, appUser.uid, appUser.displayName)
+      }
+      setPendingUsers((prev) => prev.filter((u) => u.uid !== uid))
+      setPendingCount((prev) => Math.max(0, prev - 1))
+      // Also update the main users list
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.uid === uid ? { ...u, accountStatus: 'active' as const } : u,
+        ),
+      )
+    } catch (err) {
+      alert('审批通过失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
+  async function handleRejectAdmin(uid: string) {
+    try {
+      await updateAccountStatus(uid, 'suspended')
+      if (appUser) {
+        await notifyAccountStatus(uid, false, appUser.uid, appUser.displayName)
+      }
+      setPendingUsers((prev) => prev.filter((u) => u.uid !== uid))
+      setPendingCount((prev) => Math.max(0, prev - 1))
+      // Also update the main users list
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.uid === uid ? { ...u, accountStatus: 'suspended' as const } : u,
+        ),
+      )
+    } catch (err) {
+      alert('审批拒绝失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    }
+  }
+
   function handleToggleDisabled() {
     alert('功能开发中')
   }
@@ -176,6 +243,7 @@ export default function UserManagePage() {
   }
 
   const showVendorStatusFilter = activeRole === 'all' || activeRole === 'vendor'
+  const isPendingApprovalTab = activeRole === 'pending_approval'
 
   if (loading) {
     return (
@@ -236,6 +304,11 @@ export default function UserManagePage() {
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
+              {tab.value === 'pending_approval' && pendingCount > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+                  {pendingCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -272,7 +345,126 @@ export default function UserManagePage() {
         </div>
       </div>
 
+      {/* Pending Admin Approval Table */}
+      {isPendingApprovalTab && (
+        <div className="bg-white rounded-xl shadow-md border border-border overflow-hidden">
+          {pendingUsers.length === 0 ? (
+            <div className="text-center py-20">
+              <ClipboardCheck className="w-12 h-12 text-text-muted mx-auto mb-4" />
+              <p className="text-text-secondary">暂无待审批的管理员申请</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-bg-gray/50">
+                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-6 py-3">
+                      姓名
+                    </th>
+                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-6 py-3">
+                      邮箱
+                    </th>
+                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
+                      手机号
+                    </th>
+                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-6 py-3">
+                      职位
+                    </th>
+                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-6 py-3 hidden md:table-cell">
+                      申请理由
+                    </th>
+                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-6 py-3">
+                      申请级别
+                    </th>
+                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-6 py-3 hidden md:table-cell">
+                      申请时间
+                    </th>
+                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-6 py-3">
+                      操作
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {pendingUsers.map((user) => (
+                    <tr key={user.uid} className="group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+                            <span className="text-sm font-semibold text-yellow-700">
+                              {user.displayName.charAt(0)}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-text-primary">
+                            {user.displayName}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-text-secondary">{user.email}</span>
+                      </td>
+                      <td className="px-6 py-4 hidden sm:table-cell">
+                        <span className="text-sm text-text-secondary">{user.phone}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-text-secondary">
+                          {user.adminApplication?.position ?? '未填写'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 hidden md:table-cell">
+                        <span className="text-sm text-text-secondary line-clamp-2">
+                          {user.adminApplication?.reason ?? '未填写'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                          {ADMIN_LEVELS.find((l) => l.value === (user.adminLevel ?? 'worker'))?.label ?? '员工'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 hidden md:table-cell">
+                        <span className="text-sm text-text-secondary">
+                          {formatTimestamp(user.adminApplication?.appliedAt ?? user.createdAt)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleApproveAdmin(user.uid)}
+                            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50 transition-colors"
+                            title="通过审批"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            通过
+                          </button>
+                          <button
+                            onClick={() => handleRejectAdmin(user.uid)}
+                            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                            title="拒绝审批"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            拒绝
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Table Footer */}
+          {pendingUsers.length > 0 && (
+            <div className="border-t border-border px-6 py-3 flex items-center justify-between bg-bg-gray/30">
+              <p className="text-sm text-text-muted">
+                共 {pendingUsers.length} 条待审批申请
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* User Table */}
+      {!isPendingApprovalTab && (
       <div className="bg-white rounded-xl shadow-md border border-border overflow-hidden">
         {filteredUsers.length === 0 ? (
           <div className="text-center py-20">
@@ -366,11 +558,17 @@ export default function UserManagePage() {
                           >
                             {vendorStatus.label}
                           </span>
-                        ) : (
-                          <span className="inline-flex text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700">
-                            正常
-                          </span>
-                        )}
+                        ) : (() => {
+                          const acctStatus = user.accountStatus ?? 'active'
+                          const badge = ACCOUNT_STATUS_BADGE_MAP[acctStatus]
+                          return (
+                            <span
+                              className={`inline-flex text-xs font-medium px-2.5 py-1 rounded-full ${badge.className}`}
+                            >
+                              {badge.label}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="px-6 py-4 hidden md:table-cell">
                         <span className="text-sm text-text-secondary">
@@ -472,6 +670,7 @@ export default function UserManagePage() {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }

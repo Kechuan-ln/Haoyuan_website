@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ROUTES } from '@/config/routes'
+import NotificationBell from '@/components/shared/NotificationBell'
 import Sidebar from '@/components/layout/Sidebar'
 import type { SidebarItem } from '@/components/layout/Sidebar'
 import { cn } from '@/utils/cn'
@@ -81,6 +82,7 @@ export default function PortalLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <span className="text-sm text-text-secondary">
               {appUser?.displayName ?? '供应商'}
             </span>

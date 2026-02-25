@@ -19,6 +19,7 @@ export const ROUTES = {
   // Auth
   LOGIN: '/login',
   REGISTER: '/register',
+  ACCOUNT_PENDING: '/account-pending',
 
   // Vendor
   VENDOR_DASHBOARD: '/vendor/dashboard',

@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore'
 import type { UpdateData } from 'firebase/firestore'
 import { requireDb } from '@/config/firebase'
-import type { AdminLevel, AppUser, VendorStatus } from '@/types/user'
+import type { AccountStatus, AdminLevel, AppUser, VendorStatus } from '@/types/user'
 
 const USERS = 'users'
 
@@ -75,4 +75,24 @@ export async function listUsers(role?: string): Promise<AppUser[]> {
   const q = query(collection(db, USERS), ...constraints)
   const snap = await getDocs(q)
   return snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as AppUser)
+}
+
+export async function listPendingAdminApplications(): Promise<AppUser[]> {
+  const db = requireDb()
+  const q = query(
+    collection(db, USERS),
+    where('role', '==', 'admin'),
+    where('accountStatus', '==', 'pending_approval'),
+    orderBy('createdAt', 'desc'),
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as AppUser)
+}
+
+export async function updateAccountStatus(uid: string, status: AccountStatus): Promise<void> {
+  const db = requireDb()
+  await updateDoc(doc(db, USERS, uid), {
+    accountStatus: status,
+    updatedAt: serverTimestamp(),
+  })
 }

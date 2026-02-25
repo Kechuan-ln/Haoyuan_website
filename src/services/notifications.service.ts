@@ -100,3 +100,21 @@ export async function getUnreadCount(userId: string): Promise<number> {
   const snap = await getDocs(q)
   return snap.size
 }
+
+export async function notifyAccountStatus(
+  toUserId: string,
+  approved: boolean,
+  fromUserId: string,
+  fromUserName: string,
+): Promise<string> {
+  return createNotification({
+    type: approved ? 'account_approved' : 'account_rejected',
+    contentTitle: approved ? '账号审批通过' : '账号审批未通过',
+    message: approved
+      ? '您的管理员账号已通过审批，现在可以登录系统。'
+      : '您的管理员账号申请未通过，如有疑问请联系管理员。',
+    fromUserId,
+    fromUserName,
+    toUserId,
+  })
+}

@@ -17,9 +17,13 @@ const NOTIFICATION_TYPE_MAP: Record<NotificationType, { label: string; className
   review_request: { label: '审核请求', className: 'text-yellow-600' },
   approved: { label: '已通过', className: 'text-green-600' },
   rejected: { label: '已退回', className: 'text-red-600' },
+  account_approved: { label: '账号已通过', className: 'text-green-600' },
+  account_rejected: { label: '账号已拒绝', className: 'text-red-600' },
+  admin_application: { label: '管理员申请', className: 'text-navy' },
 }
 
-function getContentPath(contentType: ContentType, contentId: string): string {
+function getContentPath(contentType?: ContentType, contentId?: string): string | null {
+  if (!contentType) return null
   switch (contentType) {
     case 'article':
       return `/admin/articles/${contentId}/edit`
@@ -29,6 +33,18 @@ function getContentPath(contentType: ContentType, contentId: string): string {
       return '/admin/services'
     case 'qualification':
       return '/admin/qualifications'
+  }
+}
+
+function getNotificationPath(notification: Notification): string | null {
+  switch (notification.type) {
+    case 'admin_application':
+      return '/admin/users'
+    case 'account_approved':
+    case 'account_rejected':
+      return null
+    default:
+      return getContentPath(notification.contentType, notification.contentId)
   }
 }
 
@@ -123,7 +139,10 @@ export default function NotificationBell() {
       setUnreadCount((prev) => Math.max(0, prev - 1))
     }
     setOpen(false)
-    navigate(getContentPath(notification.contentType, notification.contentId))
+    const path = getNotificationPath(notification)
+    if (path) {
+      navigate(path)
+    }
   }
 
   async function handleMarkAllRead() {

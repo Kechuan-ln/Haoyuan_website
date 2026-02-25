@@ -6,6 +6,15 @@ export type AdminLevel = 'manager' | 'worker'
 
 export type VendorStatus = 'pending' | 'approved' | 'rejected'
 
+export type AccountStatus = 'active' | 'pending_approval' | 'suspended'
+
+export interface AdminApplication {
+  realName: string
+  position: string
+  reason: string
+  appliedAt: Timestamp
+}
+
 export interface VendorProfile {
   companyName: string
   creditCode: string
@@ -22,6 +31,10 @@ export interface AppUser {
   role: UserRole
   adminLevel?: AdminLevel
   vendorProfile?: VendorProfile
+  accountStatus?: AccountStatus
+  adminApplication?: AdminApplication
+  companyName?: string
+  registrationReason?: string
   createdAt: Timestamp
   updatedAt: Timestamp
 }

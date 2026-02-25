@@ -47,10 +47,14 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow create: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && (request.resource.data.get('adminLevel', null) != 'manager'
+            || (exists(/databases/$(database)/documents/settings/security)
+                && request.resource.data.get('_inviteCode', '') ==
+                   get(/databases/$(database)/documents/settings/security).data.managerInviteCode));
       allow update: if isManager()
-        || (isAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'adminLevel']))
-        || (isOwner(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'adminLevel']));
+        || (isAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'adminLevel', 'accountStatus']))
+        || (isOwner(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'adminLevel', 'accountStatus']));
       allow delete: if isManager();
     }
 
@@ -171,8 +175,13 @@ service cloud.firestore {
 
     // ─── Site Settings ─────────────────────────────────────────────────
 
-    match /settings/{settingId} {
+    match /settings/site {
       allow read: if true;
+      allow write: if isManager();
+    }
+
+    match /settings/security {
+      allow read: if isManager();
       allow write: if isManager();
     }
   }
