@@ -49,12 +49,8 @@ export default function BidHallPage() {
     try {
       setLoading(true)
       setError(null)
-      const data = await getBids()
-      // Only show public-facing statuses
-      const publicBids = data.filter((b) =>
-        ['published', 'bidding', 'closed', 'awarded'].includes(b.status),
-      )
-      setBids(publicBids)
+      const data = await getBids({ statusIn: ['published', 'bidding', 'closed', 'awarded'] })
+      setBids(data)
     } catch (err) {
       console.error('加载招标数据失败:', err)
       setError('加载招标数据失败，请稍后重试')

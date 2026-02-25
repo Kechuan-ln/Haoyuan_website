@@ -19,12 +19,15 @@ const SUBMISSIONS = 'bidSubmissions'
 
 export interface BidFilters {
   status?: BidStatus
+  statusIn?: BidStatus[]
 }
 
 export async function getBids(filters?: BidFilters): Promise<Bid[]> {
   const db = requireDb()
   const constraints = []
-  if (filters?.status) {
+  if (filters?.statusIn && filters.statusIn.length > 0) {
+    constraints.push(where('status', 'in', filters.statusIn))
+  } else if (filters?.status) {
     constraints.push(where('status', '==', filters.status))
   }
   const q = query(collection(db, BIDS), ...constraints)

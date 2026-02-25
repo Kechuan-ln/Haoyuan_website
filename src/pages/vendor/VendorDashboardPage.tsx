@@ -109,7 +109,7 @@ export default function VendorDashboardPage() {
     setError(null)
     try {
       const [bidsData, subsData] = await Promise.all([
-        getBids(),
+        getBids({ statusIn: ['published', 'bidding', 'closed', 'awarded'] }),
         getMySubmissions(user.uid),
       ])
       setBids(bidsData)

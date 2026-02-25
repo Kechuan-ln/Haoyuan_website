@@ -61,7 +61,7 @@ export default function VendorMyBidsPage() {
     try {
       const [subsData, bidsData] = await Promise.all([
         getMySubmissions(user.uid),
-        getBids(),
+        getBids({ statusIn: ['published', 'bidding', 'closed', 'awarded'] }),
       ])
       setSubmissions(subsData)
 
