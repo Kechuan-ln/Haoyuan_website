@@ -60,7 +60,8 @@ src/
 
 > **原因**: Firebase (Google) 服务被 GFW 屏蔽，国内用户无法使用
 > **迁移方案**: `RPD-firebase-to-cloudbase-migration.md`（项目根目录，11 个 Phase 的完整方案）
-> **远程分支**: `tengxunyun`（GitHub，禁止合并到 main 直至所有测试通过）
+> **远程分支**: `tengxunyun`（GitHub）
+> **分支策略**: 迁移完成后代码保留在 tengxunyun 分支，禁止 merge 回 main。main 保持 Firebase 版本独立运行
 
 ### 规则
 - **所有迁移代码改动必须在 worktree 中进行，禁止直接修改 main 分支**
