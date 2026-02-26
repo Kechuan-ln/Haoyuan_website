@@ -10,7 +10,6 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import HeroSection from '@/components/shared/HeroSection'
 import AnimatedSection from '@/components/shared/AnimatedSection'
 import { ImageWithFallback } from '@/components/shared/ImageWithFallback'
-import type { DocumentSnapshot } from 'firebase/firestore'
 import type { Article, ArticleCategory } from '@/types/article'
 import { getArticles } from '@/services/articles.service'
 import { formatDate } from '@/utils/format'
@@ -38,7 +37,6 @@ export default function NewsPage() {
   const [activeTab, setActiveTab] = useState('all')
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
-  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
 
@@ -46,17 +44,16 @@ export default function NewsPage() {
     const fetchArticles = async () => {
       setLoading(true)
       setArticles([])
-      setLastDoc(null)
       setHasMore(true)
       try {
         const result = await getArticles({
           isPublished: true,
           category: activeTab === 'all' ? undefined : (activeTab as ArticleCategory),
           pageSize: PAGE_SIZE,
+          offset: 0,
         })
         setArticles(result.articles)
-        setLastDoc(result.lastDoc)
-        setHasMore(result.articles.length >= PAGE_SIZE)
+        setHasMore(result.hasMore ?? result.articles.length >= PAGE_SIZE)
       } catch (error) {
         console.error('Failed to load articles:', error)
       } finally {
@@ -67,18 +64,17 @@ export default function NewsPage() {
   }, [activeTab])
 
   const loadMore = async () => {
-    if (!lastDoc || loadingMore) return
+    if (loadingMore) return
     setLoadingMore(true)
     try {
       const result = await getArticles({
         isPublished: true,
         category: activeTab === 'all' ? undefined : (activeTab as ArticleCategory),
         pageSize: PAGE_SIZE,
-        lastDoc,
+        offset: articles.length,
       })
       setArticles(prev => [...prev, ...result.articles])
-      setLastDoc(result.lastDoc)
-      setHasMore(result.articles.length >= PAGE_SIZE)
+      setHasMore(result.hasMore ?? result.articles.length >= PAGE_SIZE)
     } catch (error) {
       console.error('Failed to load more:', error)
     } finally {

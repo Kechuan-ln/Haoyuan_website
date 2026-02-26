@@ -1,26 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Building2, Shield, ShieldCheck, CheckCircle } from 'lucide-react'
-import { signUp, signOut } from '@/services/auth.service'
+import { signUpStep1, signUpStep2, signOut } from '@/services/auth.service'
+import type { SignUpOptions } from '@/services/auth.service'
 import { validateInviteCode } from '@/services/security-code.service'
+import { requireAuth } from '@/config/cloudbase'
 import { ROUTES } from '@/config/routes'
 import { COMPANY } from '@/config/constants'
 import { cn } from '@/utils/cn'
 
-const ERROR_MESSAGES: Record<string, string> = {
-  'auth/email-already-in-use': '该邮箱已被注册',
-  'auth/invalid-email': '邮箱格式不正确',
-  'auth/weak-password': '密码强度不够，请使用至少6位密码',
-  'auth/operation-not-allowed': '注册功能暂不可用，请联系管理员',
-}
-
 function getErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as { code: string }).code
-    return ERROR_MESSAGES[code] ?? '注册失败，请稍后重试'
+  if (error && typeof error === 'object' && 'message' in error) {
+    const msg = (error as { message: string }).message
+    if (msg.includes('already registered') || msg.includes('already exists')) return '该邮箱已被注册'
+    if (msg.includes('invalid') && msg.includes('email')) return '邮箱格式不正确'
+    if (msg.includes('weak') || msg.includes('password')) return '密码强度不够，请使用至少6位密码'
+    return msg
   }
-  return '注册失败，请稍后重试'
+  return '操作失败，请稍后重试'
 }
 
 type TabKey = 'vendor' | 'worker' | 'manager'
@@ -55,6 +53,25 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+
+  // OTP verification state
+  const [otpStep, setOtpStep] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [verifyOtpFn, setVerifyOtpFn] = useState<
+    ((params: { token: string }) => Promise<{ data: { user?: { id: string }; session?: unknown }; error: unknown }>) | null
+  >(null)
+  const [signUpOpts, setSignUpOpts] = useState<SignUpOptions | null>(null)
+  const [countdown, setCountdown] = useState(0)
+
+  function startCountdown() {
+    setCountdown(60)
+  }
+
+  useEffect(() => {
+    if (countdown <= 0) return
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [countdown])
 
   function validateCommon(): string | null {
     if (!displayName.trim()) return '请输入姓名'
@@ -102,8 +119,10 @@ export default function RegisterPage() {
         }
       }
 
+      let opts: SignUpOptions
+
       if (activeTab === 'vendor') {
-        await signUp({
+        opts = {
           email,
           password,
           displayName: displayName.trim(),
@@ -111,11 +130,9 @@ export default function RegisterPage() {
           role: 'vendor',
           companyName: companyName.trim(),
           registrationReason: registrationReason.trim() || undefined,
-        })
-        await signOut()
-        setSuccess(true)
+        }
       } else if (activeTab === 'worker') {
-        await signUp({
+        opts = {
           email,
           password,
           displayName: displayName.trim(),
@@ -127,11 +144,9 @@ export default function RegisterPage() {
             position: position.trim(),
             reason: reason.trim(),
           },
-        })
-        await signOut()
-        setSuccess(true)
+        }
       } else {
-        await signUp({
+        opts = {
           email,
           password,
           displayName: displayName.trim(),
@@ -144,15 +159,42 @@ export default function RegisterPage() {
             position: '高级管理员',
             reason: '通过邀请码注册',
           },
-        })
-        await signOut()
-        setSuccess(true)
+        }
       }
+
+      const result = await signUpStep1(opts)
+      setVerifyOtpFn(() => result.verifyOtp)
+      setSignUpOpts(opts)
+      setOtpStep(true)
+      startCountdown()
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleVerifyOtp(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await signUpStep2(verifyOtpFn!, otpCode, signUpOpts!)
+      await signOut()
+      setSuccess(true)
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleResendOtp() {
+    try {
+      const auth = requireAuth()
+      await auth.resend({ email, type: 'signup' })
+      startCountdown()
+    } catch { /* ignore resend errors */ }
   }
 
   if (success) {
@@ -178,6 +220,93 @@ export default function RegisterPage() {
               {activeTab === 'vendor' ? '立即登录' : '返回登录'}
             </Link>
           </div>
+          <p className="mt-6 text-center text-xs text-text-muted">
+            &copy; {new Date().getFullYear()} {COMPANY.name}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // OTP verification step
+  if (otpStep) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg-gray px-4 py-8">
+        <div className="w-full max-w-md">
+          {/* Back to form */}
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={() => { setOtpStep(false); setOtpCode(''); setError('') }}
+              className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-navy transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              返回修改信息
+            </button>
+          </div>
+
+          {/* Header */}
+          <div className="mb-6 text-center">
+            <h1 className="text-2xl font-bold text-navy">{COMPANY.name}</h1>
+            <p className="mt-2 text-gold">邮箱验证</p>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-lg">
+            <div className="text-center mb-4">
+              <p className="text-sm text-text-secondary">
+                验证码已发送至 <span className="font-medium">{email}</span>
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div>
+                <label htmlFor="otpCode" className="mb-1 block text-sm font-medium text-text-primary">
+                  验证码
+                </label>
+                <input
+                  id="otpCode"
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  placeholder="请输入邮箱验证码"
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm outline-none transition-colors focus:border-navy focus:ring-1 focus:ring-navy font-mono tracking-widest text-center text-lg"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-md bg-navy py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-dark disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? '验证中...' : '验证并完成注册'}
+              </button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  disabled={countdown > 0}
+                  onClick={handleResendOtp}
+                  className="text-sm text-teal hover:text-teal-dark disabled:text-text-muted transition-colors"
+                >
+                  {countdown > 0 ? `${countdown}秒后可重新发送` : '重新发送验证码'}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-4 text-center text-sm">
+              <Link to={ROUTES.LOGIN} className="text-gold hover:text-gold-dark transition-colors">
+                已有账号？立即登录
+              </Link>
+            </div>
+          </div>
+
+          {/* Footer */}
           <p className="mt-6 text-center text-xs text-text-muted">
             &copy; {new Date().getFullYear()} {COMPANY.name}
           </p>

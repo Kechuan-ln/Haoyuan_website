@@ -23,7 +23,7 @@ import type { Service } from '@/types/service'
 import type { HomeContent } from '@/types/home'
 import type { HeroSlide } from '@/types/contact'
 
-/* ---------- Default values (used when Firestore doc is empty) ---------- */
+/* ---------- Default values (used when database doc is empty) ---------- */
 
 const DEFAULT_BRAND_VALUES: HomeContent['brandValues'] = [
   { label: '专业', iconName: 'Target', description: '以精湛技术立身' },

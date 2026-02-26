@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
-
 export type BidStatus = 'draft' | 'published' | 'bidding' | 'closed' | 'evaluating' | 'awarded'
 
 export type SubmissionStatus = 'submitted' | 'under_review' | 'qualified' | 'awarded' | 'not_awarded'
@@ -7,7 +5,7 @@ export type SubmissionStatus = 'submitted' | 'under_review' | 'qualified' | 'awa
 export interface BidDocument {
   name: string
   url: string
-  uploadedAt: Timestamp
+  uploadedAt: Date
 }
 
 export interface Bid {
@@ -19,21 +17,21 @@ export interface Bid {
   requirements: string
   budget: number
   status: BidStatus
-  biddingDeadline: Timestamp
-  openingAt: Timestamp
+  biddingDeadline: Date
+  openingAt: Date
   documents: BidDocument[]
   reviewerIds: string[]
   awardedVendorId?: string
   createdBy: string
-  createdAt: Timestamp
-  updatedAt: Timestamp
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface SubmissionDocument {
   name: string
   url: string
   sha256Hash: string
-  uploadedAt: Timestamp
+  uploadedAt: Date
 }
 
 export interface BidSubmission {
@@ -44,8 +42,8 @@ export interface BidSubmission {
   documents: SubmissionDocument[]
   status: SubmissionStatus
   isLocked: boolean
-  submittedAt: Timestamp
-  createdAt: Timestamp
+  submittedAt: Date
+  createdAt: Date
 }
 
 export interface EvaluationScores {
@@ -64,5 +62,5 @@ export interface Evaluation {
   scores: EvaluationScores
   comments: string
   recommendation: string
-  evaluatedAt: Timestamp
+  evaluatedAt: Date
 }

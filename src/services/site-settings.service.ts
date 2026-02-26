@@ -1,27 +1,22 @@
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 import type { SiteSettings } from '@/types/contact'
 
-const SETTINGS_DOC = 'settings/site'
+const COLLECTION = 'settings'
+const DOC_ID = 'site'
 
 export async function getSiteSettings(): Promise<SiteSettings | null> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, SETTINGS_DOC))
-  if (!snap.exists()) return null
-  return snap.data() as SiteSettings
+  const result = await db.collection(COLLECTION).doc(DOC_ID).get()
+  if (!result.data || result.data.length === 0) return null
+  return result.data[0] as SiteSettings
 }
 
 export async function updateSiteSettings(
   data: SiteSettings,
 ): Promise<void> {
   const db = requireDb()
-  await setDoc(doc(db, SETTINGS_DOC), {
+  await db.collection(COLLECTION).doc(DOC_ID).set({
     ...data,
-    updatedAt: serverTimestamp(),
+    updatedAt: new Date(),
   })
 }

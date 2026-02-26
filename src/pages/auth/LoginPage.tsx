@@ -17,9 +17,19 @@ const ERROR_MESSAGES: Record<string, string> = {
 }
 
 function getErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as { code: string }).code
-    return ERROR_MESSAGES[code] ?? '登录失败，请稍后重试'
+  if (error && typeof error === 'object') {
+    if ('message' in error) {
+      const msg = (error as { message: string }).message
+      if (msg.includes('Invalid login') || msg.includes('invalid')) return '邮箱或密码错误'
+      if (msg.includes('not found') || msg.includes('no user')) return '该邮箱尚未注册'
+      if (msg.includes('too many') || msg.includes('rate limit')) return '登录尝试次数过多，请稍后再试'
+      if (msg.includes('disabled') || msg.includes('blocked')) return '该账号已被禁用，请联系管理员'
+      return msg
+    }
+    if ('code' in error) {
+      const code = (error as { code: string }).code
+      return ERROR_MESSAGES[code] ?? '登录失败，请稍后重试'
+    }
   }
   return '登录失败，请稍后重试'
 }
@@ -210,7 +220,7 @@ export default function LoginPage() {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-text-secondary">
-                  请输入您的注册邮箱，我们将发送重置密码链接。
+                  请输入您的注册邮箱，我们将发送重置密码邮件。
                 </p>
                 <input
                   type="email"

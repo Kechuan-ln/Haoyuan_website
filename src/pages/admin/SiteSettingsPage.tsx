@@ -208,13 +208,9 @@ export default function SiteSettingsPage() {
 
   function formatCodeUpdatedTime(): string {
     if (!codeUpdatedAt) return '未知'
-    if (codeUpdatedAt instanceof Date) {
-      return codeUpdatedAt.toLocaleString('zh-CN')
-    }
-    if (typeof codeUpdatedAt === 'object' && 'toDate' in codeUpdatedAt) {
-      return (codeUpdatedAt as { toDate: () => Date }).toDate().toLocaleString('zh-CN')
-    }
-    return '未知'
+    const date = codeUpdatedAt instanceof Date ? codeUpdatedAt : new Date(codeUpdatedAt as string | number)
+    if (isNaN(date.getTime())) return '未知'
+    return date.toLocaleString('zh-CN')
   }
 
   function handleReset() {

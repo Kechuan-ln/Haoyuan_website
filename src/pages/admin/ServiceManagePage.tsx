@@ -217,8 +217,8 @@ export default function ServiceManagePage() {
         const newService: Service = {
           id: newId,
           ...payload,
-          createdAt: { toDate: () => new Date() } as Service['createdAt'],
-          updatedAt: { toDate: () => new Date() } as Service['updatedAt'],
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }
         setServices((prev) => [...prev, newService])
       }
@@ -319,8 +319,8 @@ export default function ServiceManagePage() {
         const newService: Service = {
           id: newId,
           ...payload,
-          createdAt: { toDate: () => new Date() } as Service['createdAt'],
-          updatedAt: { toDate: () => new Date() } as Service['updatedAt'],
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }
         setServices((prev) => [...prev, newService])
       }

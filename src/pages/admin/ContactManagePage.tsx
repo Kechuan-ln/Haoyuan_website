@@ -30,9 +30,7 @@ const FILTER_TABS: { label: string; value: FilterTab }[] = [
 
 function formatDate(ts: unknown): string {
   if (!ts) return ''
-  const d = ts && typeof ts === 'object' && 'toDate' in ts
-    ? (ts as { toDate: () => Date }).toDate()
-    : new Date(ts as string | number)
+  const d = ts instanceof Date ? ts : new Date(ts as string | number)
   return `${d.getMonth() + 1}月${d.getDate()}日`
 }
 

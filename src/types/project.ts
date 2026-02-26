@@ -1,4 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
 import type { ContentStatus } from './content-status'
 
 export interface Project {
@@ -15,12 +14,12 @@ export interface Project {
   serviceType: string
   isPublished: boolean
   sortOrder: number
-  createdAt: Timestamp
-  updatedAt: Timestamp
+  createdAt: Date
+  updatedAt: Date
   status?: ContentStatus
   submittedBy?: string
-  submittedAt?: Timestamp
+  submittedAt?: Date
   reviewedBy?: string
-  reviewedAt?: Timestamp
+  reviewedAt?: Date
   rejectionReason?: string
 }

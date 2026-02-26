@@ -1,19 +1,4 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
-import type { UpdateData } from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 import type { Project } from '@/types/project'
 import type { ContentStatus } from '@/types/content-status'
 
@@ -27,50 +12,52 @@ export interface ProjectFilters {
 
 export async function getProjects(filters?: ProjectFilters): Promise<Project[]> {
   const db = requireDb()
-  const constraints = []
+  const whereCondition: Record<string, unknown> = {}
   if (filters?.category) {
-    constraints.push(where('category', '==', filters.category))
+    whereCondition.category = filters.category
   }
   if (filters?.isPublished !== undefined) {
-    constraints.push(where('isPublished', '==', filters.isPublished))
+    whereCondition.isPublished = filters.isPublished
   }
   if (filters?.status) {
-    constraints.push(where('status', '==', filters.status))
+    whereCondition.status = filters.status
   }
-  const q = query(collection(db, PROJECTS), ...constraints)
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Project)
+  const result = await db.collection(PROJECTS).where(whereCondition).get()
+  return (result.data || []).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as Project,
+  )
 }
 
 export async function getLatestProjects(count = 3): Promise<Project[]> {
   const db = requireDb()
-  const q = query(
-    collection(db, PROJECTS),
-    orderBy('createdAt', 'desc'),
-    limit(count),
+  const result = await db.collection(PROJECTS)
+    .orderBy('createdAt', 'desc')
+    .limit(count)
+    .get()
+  return (result.data || []).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as Project,
   )
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Project)
 }
 
 export async function getProject(id: string): Promise<Project | null> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, PROJECTS, id))
-  if (!snap.exists()) return null
-  return { id: snap.id, ...snap.data() } as Project
+  const result = await db.collection(PROJECTS).doc(id).get()
+  if (!result.data || result.data.length === 0) return null
+  const doc = result.data[0]
+  return { id: doc._id, ...doc } as Project
 }
 
 export async function createProject(
   data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
   const db = requireDb()
-  const ref = await addDoc(collection(db, PROJECTS), {
+  const result = await db.collection(PROJECTS).add({
     ...data,
     status: 'draft' as ContentStatus,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
-  return ref.id
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }) as unknown as { id: string }
+  return result.id
 }
 
 export async function updateProject(
@@ -78,13 +65,13 @@ export async function updateProject(
   data: Partial<Omit<Project, 'id' | 'createdAt'>>,
 ): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, PROJECTS, id), {
+  await db.collection(PROJECTS).doc(id).update({
     ...data,
-    updatedAt: serverTimestamp(),
-  } as UpdateData<Project>)
+    updatedAt: new Date(),
+  })
 }
 
 export async function deleteProject(id: string): Promise<void> {
   const db = requireDb()
-  await deleteDoc(doc(db, PROJECTS, id))
+  await db.collection(PROJECTS).doc(id).remove()
 }

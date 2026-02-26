@@ -1,4 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
 import type { ContentStatus } from './content-status'
 
 export interface Qualification {
@@ -11,12 +10,12 @@ export interface Qualification {
   coverImageUrl?: string
   sortOrder: number
   isPublished: boolean
-  createdAt: Timestamp
-  updatedAt: Timestamp
+  createdAt: Date
+  updatedAt: Date
   status?: ContentStatus
   submittedBy?: string
-  submittedAt?: Timestamp
+  submittedAt?: Date
   reviewedBy?: string
-  reviewedAt?: Timestamp
+  reviewedAt?: Date
   rejectionReason?: string
 }

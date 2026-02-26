@@ -1,17 +1,4 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
-import type { UpdateData } from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 import type { Bid, BidStatus, BidSubmission, SubmissionStatus } from '@/types/bid'
 
 const BIDS = 'bids'
@@ -24,34 +11,37 @@ export interface BidFilters {
 
 export async function getBids(filters?: BidFilters): Promise<Bid[]> {
   const db = requireDb()
-  const constraints = []
+  const _ = db.command
+
+  const whereCondition: Record<string, unknown> = {}
   if (filters?.statusIn && filters.statusIn.length > 0) {
-    constraints.push(where('status', 'in', filters.statusIn))
+    whereCondition.status = _.in(filters.statusIn)
   } else if (filters?.status) {
-    constraints.push(where('status', '==', filters.status))
+    whereCondition.status = filters.status
   }
-  const q = query(collection(db, BIDS), ...constraints)
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Bid)
+
+  const result = await db.collection(BIDS).where(whereCondition).get()
+  return (result.data || []).map((doc: any) => ({ id: doc._id, ...doc }) as Bid)
 }
 
 export async function getBid(id: string): Promise<Bid | null> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, BIDS, id))
-  if (!snap.exists()) return null
-  return { id: snap.id, ...snap.data() } as Bid
+  const result = await db.collection(BIDS).doc(id).get()
+  if (!result.data || result.data.length === 0) return null
+  const doc = result.data[0]
+  return { id: doc._id, ...doc } as Bid
 }
 
 export async function createBid(
   data: Omit<Bid, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
   const db = requireDb()
-  const ref = await addDoc(collection(db, BIDS), {
+  const result = await db.collection(BIDS).add({
     ...data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
-  return ref.id
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }) as unknown as { id: string }
+  return result.id
 }
 
 export async function updateBid(
@@ -59,10 +49,10 @@ export async function updateBid(
   data: Partial<Omit<Bid, 'id' | 'createdAt'>>,
 ): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, BIDS, id), {
+  await db.collection(BIDS).doc(id).update({
     ...data,
-    updatedAt: serverTimestamp(),
-  } as UpdateData<Bid>)
+    updatedAt: new Date(),
+  })
 }
 
 export async function updateBidStatus(
@@ -70,9 +60,9 @@ export async function updateBidStatus(
   status: BidStatus,
 ): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, BIDS, id), {
+  await db.collection(BIDS).doc(id).update({
     status,
-    updatedAt: serverTimestamp(),
+    updatedAt: new Date(),
   })
 }
 
@@ -80,46 +70,50 @@ export async function getSubmissionsForBid(
   bidId: string,
 ): Promise<BidSubmission[]> {
   const db = requireDb()
-  const q = query(collection(db, SUBMISSIONS), where('bidId', '==', bidId))
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as BidSubmission)
+  const result = await db.collection(SUBMISSIONS)
+    .where({ bidId })
+    .get()
+  return (result.data || []).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as BidSubmission,
+  )
 }
 
 export async function getMySubmissions(
   vendorId: string,
 ): Promise<BidSubmission[]> {
   const db = requireDb()
-  const q = query(
-    collection(db, SUBMISSIONS),
-    where('vendorId', '==', vendorId),
+  const result = await db.collection(SUBMISSIONS)
+    .where({ vendorId })
+    .get()
+  return (result.data || []).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as BidSubmission,
   )
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as BidSubmission)
 }
 
 export async function submitBid(
   data: Omit<BidSubmission, 'id' | 'createdAt'>,
 ): Promise<string> {
   const db = requireDb()
-  const ref = await addDoc(collection(db, SUBMISSIONS), {
+  const result = await db.collection(SUBMISSIONS).add({
     ...data,
-    createdAt: serverTimestamp(),
-  })
-  return ref.id
+    createdAt: new Date(),
+  }) as unknown as { id: string }
+  return result.id
 }
 
 export async function deleteBid(id: string): Promise<void> {
   const db = requireDb()
-  await deleteDoc(doc(db, BIDS, id))
+  await db.collection(BIDS).doc(id).remove()
 }
 
 export async function getSubmission(
   id: string,
 ): Promise<BidSubmission | null> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, SUBMISSIONS, id))
-  if (!snap.exists()) return null
-  return { id: snap.id, ...snap.data() } as BidSubmission
+  const result = await db.collection(SUBMISSIONS).doc(id).get()
+  if (!result.data || result.data.length === 0) return null
+  const doc = result.data[0]
+  return { id: doc._id, ...doc } as BidSubmission
 }
 
 export async function updateSubmission(
@@ -127,9 +121,9 @@ export async function updateSubmission(
   data: Partial<Omit<BidSubmission, 'id' | 'createdAt'>>,
 ): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, SUBMISSIONS, id), {
+  await db.collection(SUBMISSIONS).doc(id).update({
     ...data,
-  } as UpdateData<BidSubmission>)
+  })
 }
 
 export async function updateSubmissionStatus(
@@ -137,5 +131,5 @@ export async function updateSubmissionStatus(
   status: SubmissionStatus,
 ): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, SUBMISSIONS, id), { status })
+  await db.collection(SUBMISSIONS).doc(id).update({ status })
 }

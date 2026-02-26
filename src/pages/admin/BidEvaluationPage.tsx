@@ -203,7 +203,7 @@ export default function BidEvaluationPage() {
           scores: formData.scores,
           comments: formData.comments,
           recommendation: formData.recommendation,
-          evaluatedAt: { toDate: () => new Date() } as Evaluation['evaluatedAt'],
+          evaluatedAt: new Date(),
         }
         setEvaluations((prev) => [...prev, newEval])
       }

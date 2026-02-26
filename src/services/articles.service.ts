@@ -1,20 +1,4 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  serverTimestamp,
-  startAfter,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
-import type { DocumentSnapshot, UpdateData } from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 import type { Article, ArticleCategory } from '@/types/article'
 import type { ContentStatus } from '@/types/content-status'
 
@@ -25,68 +9,69 @@ export interface ArticleFilters {
   isPublished?: boolean
   status?: ContentStatus
   pageSize?: number
-  lastDoc?: DocumentSnapshot
+  offset?: number
 }
 
 export interface PaginatedArticles {
   articles: Article[]
-  lastDoc: DocumentSnapshot | null
+  hasMore: boolean
 }
 
 export async function getArticles(
   filters?: ArticleFilters,
 ): Promise<PaginatedArticles> {
   const db = requireDb()
-  const constraints = []
 
+  const whereCondition: Record<string, unknown> = {}
   if (filters?.category) {
-    constraints.push(where('category', '==', filters.category))
+    whereCondition.category = filters.category
   }
   if (filters?.isPublished !== undefined) {
-    constraints.push(where('isPublished', '==', filters.isPublished))
+    whereCondition.isPublished = filters.isPublished
   }
   if (filters?.status) {
-    constraints.push(where('status', '==', filters.status))
+    whereCondition.status = filters.status
   }
-
-  constraints.push(orderBy('publishedAt', 'desc'))
 
   const pageSize = filters?.pageSize ?? 10
-  constraints.push(limit(pageSize))
+  const offset = filters?.offset ?? 0
 
-  if (filters?.lastDoc) {
-    constraints.push(startAfter(filters.lastDoc))
-  }
+  let ref = db.collection(ARTICLES)
+    .where(whereCondition)
+    .orderBy('publishedAt', 'desc')
+    .skip(offset)
+    .limit(pageSize + 1)
 
-  const q = query(collection(db, ARTICLES), ...constraints)
-  const snap = await getDocs(q)
+  const result = await ref.get()
+  const data = result.data || []
 
-  const articles = snap.docs.map(
-    (d) => ({ id: d.id, ...d.data() }) as Article,
+  const hasMore = data.length > pageSize
+  const articles = (hasMore ? data.slice(0, pageSize) : data).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as Article,
   )
-  const lastDoc = snap.docs[snap.docs.length - 1] ?? null
 
-  return { articles, lastDoc }
+  return { articles, hasMore }
 }
 
 export async function getArticle(id: string): Promise<Article | null> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, ARTICLES, id))
-  if (!snap.exists()) return null
-  return { id: snap.id, ...snap.data() } as Article
+  const result = await db.collection(ARTICLES).doc(id).get()
+  if (!result.data || result.data.length === 0) return null
+  const doc = result.data[0]
+  return { id: doc._id, ...doc } as Article
 }
 
 export async function createArticle(
   data: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
   const db = requireDb()
-  const ref = await addDoc(collection(db, ARTICLES), {
+  const result = await db.collection(ARTICLES).add({
     ...data,
     status: 'draft' as ContentStatus,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
-  return ref.id
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }) as unknown as { id: string }
+  return result.id
 }
 
 export async function updateArticle(
@@ -94,13 +79,13 @@ export async function updateArticle(
   data: Partial<Omit<Article, 'id' | 'createdAt'>>,
 ): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, ARTICLES, id), {
+  await db.collection(ARTICLES).doc(id).update({
     ...data,
-    updatedAt: serverTimestamp(),
-  } as UpdateData<Article>)
+    updatedAt: new Date(),
+  })
 }
 
 export async function deleteArticle(id: string): Promise<void> {
   const db = requireDb()
-  await deleteDoc(doc(db, ARTICLES, id))
+  await db.collection(ARTICLES).doc(id).remove()
 }

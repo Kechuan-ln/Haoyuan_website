@@ -11,7 +11,6 @@ import {
 import { cn } from '@/utils/cn'
 import type { Notification, NotificationType } from '@/types/notification'
 import type { ContentType } from '@/types/content-status'
-import type { Timestamp } from 'firebase/firestore'
 
 const NOTIFICATION_TYPE_MAP: Record<NotificationType, { label: string; className: string }> = {
   review_request: { label: '审核请求', className: 'text-yellow-600' },
@@ -48,9 +47,9 @@ function getNotificationPath(notification: Notification): string | null {
   }
 }
 
-function formatRelativeTime(ts: Timestamp | null): string {
+function formatRelativeTime(ts: Date | null): string {
   if (!ts) return ''
-  const d = ts.toDate()
+  const d = ts instanceof Date ? ts : new Date(ts)
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
   const diffMin = Math.floor(diffMs / 60000)

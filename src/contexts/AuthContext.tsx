@@ -1,13 +1,15 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { User } from 'firebase/auth'
-import { onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { auth, db, isFirebaseConfigured } from '@/config/firebase'
+import { requireAuth, requireDb, isCloudBaseConfigured } from '@/config/cloudbase'
 import type { AccountStatus, AppUser } from '@/types/user'
 
+interface CloudBaseUser {
+  uid: string
+  email?: string
+}
+
 interface AuthContextValue {
-  user: User | null
+  user: CloudBaseUser | null
   appUser: AppUser | null
   loading: boolean
   error: string | null
@@ -29,50 +31,55 @@ const AuthContext = createContext<AuthContextValue>({
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<CloudBaseUser | null>(null)
   const [appUser, setAppUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // If Firebase is not configured, skip auth listener and just mark as loaded
-    if (!isFirebaseConfigured || !auth) {
+    if (!isCloudBaseConfigured) {
       setLoading(false)
       return
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser)
+    const auth = requireAuth()
+    const db = requireDb()
+
+    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session?.user?.id) {
+        setUser(null)
+        setAppUser(null)
+        setLoading(false)
+        return
+      }
+
+      const cbUser: CloudBaseUser = {
+        uid: session.user.id as string,
+        email: session.user.email as string | undefined,
+      }
+      setUser(cbUser)
       setError(null)
 
-      if (firebaseUser) {
-        try {
-          if (!db) {
-            setAppUser(null)
-            setError('数据库未配置')
-            setLoading(false)
-            return
-          }
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
-          if (userDoc.exists()) {
-            setAppUser(userDoc.data() as AppUser)
-          } else {
-            setAppUser(null)
-            setError('用户信息不存在，请联系管理员')
-          }
-        } catch (err) {
-          console.error('获取用户信息失败:', err)
+      try {
+        const result = await db.collection('users').doc(cbUser.uid).get()
+        if (result.data && result.data.length > 0) {
+          setAppUser(result.data[0] as AppUser)
+        } else {
           setAppUser(null)
-          setError('获取用户信息失败，请稍后重试')
+          setError('用户信息不存在，请联系管理员')
         }
-      } else {
+      } catch (err) {
+        console.error('获取用户信息失败:', err)
         setAppUser(null)
+        setError('获取用户信息失败，请稍后重试')
       }
 
       setLoading(false)
     })
 
-    return unsubscribe
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const isManager =

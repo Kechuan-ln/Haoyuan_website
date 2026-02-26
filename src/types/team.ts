@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
-
 export interface TeamPillar {
   title: string
   iconName: string
@@ -31,5 +29,5 @@ export interface TeamContent {
   departments: TeamDepartment[]
   raciMatrix: RaciRow[]
   strengths: TeamStrength[]
-  updatedAt?: Timestamp
+  updatedAt?: Date
 }

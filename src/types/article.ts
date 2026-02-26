@@ -1,4 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
 import type { ContentStatus } from './content-status'
 
 export type ArticleCategory = 'news' | 'announcement' | 'industry' | 'company'
@@ -14,13 +13,13 @@ export interface Article {
   authorId: string
   authorName: string
   isPublished: boolean
-  publishedAt: Timestamp
-  createdAt: Timestamp
-  updatedAt: Timestamp
+  publishedAt: Date
+  createdAt: Date
+  updatedAt: Date
   status?: ContentStatus
   submittedBy?: string
-  submittedAt?: Timestamp
+  submittedAt?: Date
   reviewedBy?: string
-  reviewedAt?: Timestamp
+  reviewedAt?: Date
   rejectionReason?: string
 }

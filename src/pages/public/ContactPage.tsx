@@ -137,7 +137,7 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Dynamic contact info from Firestore (falls back to COMPANY constants)
+  // Dynamic contact info from database (falls back to COMPANY constants)
   const [contactAddress, setContactAddress] = useState(COMPANY.address)
   const [contactPhone, setContactPhone] = useState(COMPANY.phone)
   const [contactEmail, setContactEmail] = useState(COMPANY.email)

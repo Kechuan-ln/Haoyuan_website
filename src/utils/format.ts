@@ -1,16 +1,24 @@
-import type { Timestamp } from 'firebase/firestore'
+function toDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null
+  if (value instanceof Date) return value
+  const parsed = new Date(value)
+  return isNaN(parsed.getTime()) ? null : parsed
+}
 
-export function formatDate(timestamp: Timestamp): string {
-  const date = timestamp.toDate()
+export function formatDate(value: Date | string | null | undefined): string {
+  const date = toDate(value)
+  if (!date) return ''
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}年${month}月${day}日`
 }
 
-export function formatRelativeTime(timestamp: Timestamp): string {
+export function formatRelativeTime(value: Date | string | null | undefined): string {
+  const date = toDate(value)
+  if (!date) return ''
   const now = Date.now()
-  const then = timestamp.toDate().getTime()
+  const then = date.getTime()
   const diffMs = now - then
   const diffMin = Math.floor(diffMs / 60000)
   const diffHour = Math.floor(diffMs / 3600000)

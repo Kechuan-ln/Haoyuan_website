@@ -7,7 +7,6 @@ import { createNotification } from '@/services/notifications.service'
 import { CONTENT_TYPES } from '@/config/constants'
 import { cn } from '@/utils/cn'
 import type { ContentType } from '@/types/content-status'
-import type { Timestamp } from 'firebase/firestore'
 
 interface PendingItem {
   id: string
@@ -15,7 +14,7 @@ interface PendingItem {
   name?: string
   submittedBy?: string
   submittedByName?: string
-  submittedAt?: Timestamp
+  submittedAt?: Date
 }
 
 interface ReviewItem {
@@ -26,7 +25,7 @@ interface ReviewItem {
   collection: string
   submittedBy: string
   submittedByName: string
-  submittedAt: Timestamp | null
+  submittedAt: Date | null
 }
 
 const TYPE_TABS: { value: string; label: string }[] = [
@@ -57,9 +56,9 @@ function getEditPath(contentType: ContentType, id: string): string {
   }
 }
 
-function formatSubmittedTime(ts: Timestamp | null): string {
+function formatSubmittedTime(ts: Date | null): string {
   if (!ts) return '未知'
-  const d = ts.toDate()
+  const d = ts instanceof Date ? ts : new Date(ts)
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
   const diffMin = Math.floor(diffMs / 60000)
@@ -110,7 +109,7 @@ export default function ReviewQueuePage() {
         if (!a.submittedAt && !b.submittedAt) return 0
         if (!a.submittedAt) return 1
         if (!b.submittedAt) return -1
-        return b.submittedAt.toMillis() - a.submittedAt.toMillis()
+        return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
       })
 
       setItems(allItems)

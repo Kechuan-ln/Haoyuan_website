@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
-
 export interface BrandValue {
   label: string
   iconName: string
@@ -22,5 +20,5 @@ export interface HomeContent {
   brandValues: BrandValue[]
   threeNoWorries: ThreeNoWorry[]
   stats: HomeStat[]
-  updatedAt?: Timestamp
+  updatedAt?: Date
 }

@@ -14,7 +14,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { ROUTES } from '@/config/routes'
-import { isFirebaseConfigured } from '@/config/firebase'
+import { isCloudBaseConfigured } from '@/config/cloudbase'
 import { getArticles } from '@/services/articles.service'
 import { getProjects } from '@/services/projects.service'
 import { getLatestProjects } from '@/services/projects.service'
@@ -123,7 +123,7 @@ export default function AdminDashboardPage() {
           tagColor: 'bg-navy/10 text-navy',
           text: `发布了文章「${a.title}」`,
           time: formatRelativeTime(a.publishedAt ?? a.createdAt),
-          sortTime: (a.publishedAt ?? a.createdAt).toDate().getTime(),
+          sortTime: new Date(a.publishedAt ?? a.createdAt).getTime(),
         }))
 
         const contactItems = contacts.map((c) => ({
@@ -131,7 +131,7 @@ export default function AdminDashboardPage() {
           tagColor: 'bg-gold/10 text-gold-dark',
           text: `收到新留言来自「${c.name}」`,
           time: formatRelativeTime(c.createdAt),
-          sortTime: c.createdAt.toDate().getTime(),
+          sortTime: new Date(c.createdAt).getTime(),
         }))
 
         const projectItems = projects.map((p) => ({
@@ -139,7 +139,7 @@ export default function AdminDashboardPage() {
           tagColor: 'bg-teal/10 text-teal',
           text: `更新了项目「${p.title}」`,
           time: formatRelativeTime(p.createdAt),
-          sortTime: p.createdAt.toDate().getTime(),
+          sortTime: new Date(p.createdAt).getTime(),
         }))
 
         const merged = [...articleItems, ...contactItems, ...projectItems]
@@ -328,27 +328,27 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Firebase Status */}
+          {/* CloudBase Status */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-bg-gray">
             <div
               className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                isFirebaseConfigured ? 'bg-green-50' : 'bg-red-50'
+                isCloudBaseConfigured ? 'bg-green-50' : 'bg-red-50'
               }`}
             >
-              {isFirebaseConfigured ? (
+              {isCloudBaseConfigured ? (
                 <CheckCircle className="w-4 h-4 text-green-600" />
               ) : (
                 <AlertCircle className="w-4 h-4 text-red-500" />
               )}
             </div>
             <div>
-              <p className="text-xs text-text-muted">Firebase 状态</p>
+              <p className="text-xs text-text-muted">CloudBase 状态</p>
               <p
                 className={`text-sm font-semibold ${
-                  isFirebaseConfigured ? 'text-green-600' : 'text-red-500'
+                  isCloudBaseConfigured ? 'text-green-600' : 'text-red-500'
                 }`}
               >
-                {isFirebaseConfigured ? '已连接' : '未配置'}
+                {isCloudBaseConfigured ? '已连接' : '未配置'}
               </p>
             </div>
           </div>

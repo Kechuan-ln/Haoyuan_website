@@ -1,16 +1,4 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 import type { Qualification } from '@/types/qualification'
 import type { ContentStatus } from '@/types/content-status'
 
@@ -21,30 +9,36 @@ export async function getQualifications(opts?: {
   status?: ContentStatus
 }): Promise<Qualification[]> {
   const db = requireDb()
-  const constraints = []
+  const coll = db.collection(QUALIFICATIONS)
+  // Build where conditions, then chain orderBy
+  // where() must come before orderBy() per CloudBase SDK types
+  const whereConditions: Record<string, unknown> = {}
   if (opts?.isPublished !== undefined) {
-    constraints.push(where('isPublished', '==', opts.isPublished))
+    whereConditions.isPublished = opts.isPublished
   }
   if (opts?.status) {
-    constraints.push(where('status', '==', opts.status))
+    whereConditions.status = opts.status
   }
-  constraints.push(orderBy('sortOrder', 'asc'))
-  const q = query(collection(db, QUALIFICATIONS), ...constraints)
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Qualification)
+  const ref = Object.keys(whereConditions).length > 0
+    ? coll.where(whereConditions).orderBy('sortOrder', 'asc')
+    : coll.orderBy('sortOrder', 'asc')
+  const result = await ref.get()
+  return (result.data || []).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as Qualification,
+  )
 }
 
 export async function createQualification(
   data: Omit<Qualification, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
   const db = requireDb()
-  const ref = await addDoc(collection(db, QUALIFICATIONS), {
+  const result = await db.collection(QUALIFICATIONS).add({
     ...data,
     status: 'draft' as ContentStatus,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   })
-  return ref.id
+  return (result as any).id as string
 }
 
 export async function updateQualification(
@@ -52,13 +46,13 @@ export async function updateQualification(
   data: Partial<Omit<Qualification, 'id' | 'createdAt'>>,
 ): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, QUALIFICATIONS, id), {
+  await db.collection(QUALIFICATIONS).doc(id).update({
     ...data,
-    updatedAt: serverTimestamp(),
+    updatedAt: new Date(),
   })
 }
 
 export async function deleteQualification(id: string): Promise<void> {
   const db = requireDb()
-  await deleteDoc(doc(db, QUALIFICATIONS, id))
+  await db.collection(QUALIFICATIONS).doc(id).remove()
 }

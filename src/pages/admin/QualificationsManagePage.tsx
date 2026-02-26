@@ -197,8 +197,8 @@ export default function QualificationsManagePage() {
         const newItem: Qualification = {
           id: newId,
           ...payload,
-          createdAt: { toDate: () => new Date() } as Qualification['createdAt'],
-          updatedAt: { toDate: () => new Date() } as Qualification['updatedAt'],
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }
         setQualifications((prev) => [...prev, newItem])
       }
@@ -295,8 +295,8 @@ export default function QualificationsManagePage() {
         const newItem: Qualification = {
           id: newId,
           ...payload,
-          createdAt: { toDate: () => new Date() } as Qualification['createdAt'],
-          updatedAt: { toDate: () => new Date() } as Qualification['updatedAt'],
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }
         setQualifications((prev) => [...prev, newItem])
       }

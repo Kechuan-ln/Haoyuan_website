@@ -17,8 +17,6 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import type { Bid, BidSubmission, SubmissionDocument } from '@/types/bid'
-import type { Timestamp } from 'firebase/firestore'
-import { serverTimestamp } from 'firebase/firestore'
 import { getBid, getMySubmissions, submitBid, updateSubmission } from '@/services/bids.service'
 import { uploadFile } from '@/services/storage.service'
 import { computeSHA256 } from '@/utils/hash'
@@ -172,7 +170,7 @@ export default function BidSubmissionPage() {
           name: file.name,
           url: fileUrl,
           sha256Hash,
-          uploadedAt: serverTimestamp() as unknown as Timestamp,
+          uploadedAt: new Date(),
         })
       }
 
@@ -192,7 +190,7 @@ export default function BidSubmissionPage() {
           documents: allDocs,
           status: 'submitted',
           isLocked: false,
-          submittedAt: serverTimestamp() as unknown as Timestamp,
+          submittedAt: new Date(),
         })
       }
 
@@ -261,7 +259,7 @@ export default function BidSubmissionPage() {
 
   // Bid not in bidding status
   const isBiddingOpen = bid.status === 'bidding'
-  const deadlinePassed = bid.biddingDeadline.toDate() < new Date()
+  const deadlinePassed = new Date(bid.biddingDeadline) < new Date()
 
   if (!isBiddingOpen || deadlinePassed) {
     return (

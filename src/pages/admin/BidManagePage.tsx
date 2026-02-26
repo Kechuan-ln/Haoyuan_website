@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Timestamp } from 'firebase/firestore'
 import {
   Plus, Search, Edit2, Trash2, X, Save, FileText, Loader2, AlertCircle,
   Upload, ChevronRight, Users,
@@ -71,16 +70,16 @@ function getCategoryLabel(category: string): string {
   return PROJECT_CATEGORIES.find((c) => c.value === category)?.label ?? category
 }
 
-/** Convert a datetime-local string to a Firestore Timestamp */
-function toTimestamp(datetimeStr: string): Timestamp {
-  return Timestamp.fromDate(new Date(datetimeStr))
+/** Convert a datetime-local string to a Date */
+function toDate(datetimeStr: string): Date {
+  return new Date(datetimeStr)
 }
 
-/** Convert a Firestore Timestamp to a datetime-local string */
-function toDatetimeLocal(ts: Timestamp): string {
-  const d = ts.toDate()
+/** Convert a Date to a datetime-local string */
+function toDatetimeLocal(d: Date): string {
+  const date = d instanceof Date ? d : new Date(d)
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 /* ---------- Component ---------- */
@@ -195,7 +194,7 @@ export default function BidManagePage() {
         newDocs.push({
           name: file.name,
           url,
-          uploadedAt: Timestamp.now(),
+          uploadedAt: new Date(),
         })
       }
       setForm((prev) => ({ ...prev, documents: [...prev.documents, ...newDocs] }))
@@ -225,8 +224,8 @@ export default function BidManagePage() {
         category: form.category,
         requirements: form.requirements,
         budget: Number(form.budget) || 0,
-        biddingDeadline: form.biddingDeadline ? toTimestamp(form.biddingDeadline) : Timestamp.now(),
-        openingAt: form.openingAt ? toTimestamp(form.openingAt) : Timestamp.now(),
+        biddingDeadline: form.biddingDeadline ? toDate(form.biddingDeadline) : new Date(),
+        openingAt: form.openingAt ? toDate(form.openingAt) : new Date(),
         documents: form.documents,
       }
 
@@ -252,8 +251,8 @@ export default function BidManagePage() {
           status: 'draft',
           reviewerIds: [],
           createdBy: user?.uid ?? '',
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }
         setBids((prev) => [newBid, ...prev])
       }

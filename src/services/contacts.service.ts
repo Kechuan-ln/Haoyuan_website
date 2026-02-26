@@ -1,17 +1,4 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  getDocs,
-  doc,
-  limit,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  orderBy,
-} from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 import type { ContactMessage } from '@/types/contact'
 
 const CONTACTS = 'contacts'
@@ -20,50 +7,49 @@ export async function submitContact(
   data: Omit<ContactMessage, 'id' | 'isRead' | 'createdAt'>,
 ): Promise<string> {
   const db = requireDb()
-  const ref = await addDoc(collection(db, CONTACTS), {
+  const result = await db.collection(CONTACTS).add({
     ...data,
     isRead: false,
-    createdAt: serverTimestamp(),
+    createdAt: new Date(),
   })
-  return ref.id
+  return (result as any).id as string
 }
 
 export async function getContacts(
   isRead?: boolean,
 ): Promise<ContactMessage[]> {
   const db = requireDb()
-  const constraints = []
-  if (isRead !== undefined) {
-    constraints.push(where('isRead', '==', isRead))
-  }
-  constraints.push(orderBy('createdAt', 'desc'))
-
-  const q = query(collection(db, CONTACTS), ...constraints)
-  const snap = await getDocs(q)
-  return snap.docs.map(
-    (d) => ({ id: d.id, ...d.data() }) as ContactMessage,
+  const coll = db.collection(CONTACTS)
+  // where() must come before orderBy() per CloudBase SDK types
+  const ref = isRead !== undefined
+    ? coll.where({ isRead }).orderBy('createdAt', 'desc')
+    : coll.orderBy('createdAt', 'desc')
+  const result = await ref.get()
+  return (result.data || []).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as ContactMessage,
   )
 }
 
 export async function getLatestContacts(count = 3): Promise<ContactMessage[]> {
   const db = requireDb()
-  const q = query(
-    collection(db, CONTACTS),
-    orderBy('createdAt', 'desc'),
-    limit(count),
+  const result = await db
+    .collection(CONTACTS)
+    .orderBy('createdAt', 'desc')
+    .limit(count)
+    .get()
+  return (result.data || []).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as ContactMessage,
   )
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as ContactMessage)
 }
 
 export async function markAsRead(id: string): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, CONTACTS, id), {
+  await db.collection(CONTACTS).doc(id).update({
     isRead: true,
   })
 }
 
 export async function deleteContact(id: string): Promise<void> {
   const db = requireDb()
-  await deleteDoc(doc(db, CONTACTS, id))
+  await db.collection(CONTACTS).doc(id).remove()
 }

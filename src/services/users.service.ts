@@ -1,25 +1,14 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  updateDoc,
-  where,
-  serverTimestamp,
-} from 'firebase/firestore'
-import type { UpdateData } from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 import type { AccountStatus, AdminLevel, AppUser, VendorStatus } from '@/types/user'
 
 const USERS = 'users'
 
 export async function getUser(uid: string): Promise<AppUser | null> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, USERS, uid))
-  if (!snap.exists()) return null
-  return { uid: snap.id, ...snap.data() } as AppUser
+  const result = await db.collection(USERS).doc(uid).get()
+  if (!result.data || result.data.length === 0) return null
+  const doc = result.data[0]
+  return { uid: doc._id, ...doc } as AppUser
 }
 
 export async function updateUser(
@@ -27,72 +16,75 @@ export async function updateUser(
   data: Partial<Omit<AppUser, 'uid' | 'createdAt'>>,
 ): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, USERS, uid), {
+  await db.collection(USERS).doc(uid).update({
     ...data,
-    updatedAt: serverTimestamp(),
-  } as UpdateData<AppUser>)
+    updatedAt: new Date(),
+  })
 }
 
 export async function listVendors(status?: VendorStatus): Promise<AppUser[]> {
   const db = requireDb()
-  const constraints = [where('role', '==', 'vendor')]
+  const whereCondition: Record<string, unknown> = { role: 'vendor' }
   if (status) {
-    constraints.push(where('vendorProfile.status', '==', status))
+    whereCondition['vendorProfile.status'] = status
   }
-  const q = query(collection(db, USERS), ...constraints)
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as AppUser)
+  const result = await db.collection(USERS).where(whereCondition).get()
+  return (result.data || []).map(
+    (doc: any) => ({ uid: doc._id, ...doc }) as AppUser,
+  )
 }
 
 export async function approveVendor(uid: string): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, USERS, uid), {
+  await db.collection(USERS).doc(uid).update({
     'vendorProfile.status': 'approved',
-    updatedAt: serverTimestamp(),
+    updatedAt: new Date(),
   })
 }
 
 export async function rejectVendor(uid: string): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, USERS, uid), {
+  await db.collection(USERS).doc(uid).update({
     'vendorProfile.status': 'rejected',
-    updatedAt: serverTimestamp(),
+    updatedAt: new Date(),
   })
 }
 
 export async function updateUserAdminLevel(uid: string, adminLevel: AdminLevel): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, USERS, uid), { adminLevel, updatedAt: serverTimestamp() })
+  await db.collection(USERS).doc(uid).update({ adminLevel, updatedAt: new Date() })
 }
 
 export async function listUsers(role?: string): Promise<AppUser[]> {
   const db = requireDb()
-  const constraints = []
+  const whereCondition: Record<string, unknown> = {}
   if (role) {
-    constraints.push(where('role', '==', role))
+    whereCondition.role = role
   }
-  constraints.push(orderBy('createdAt', 'desc'))
-  const q = query(collection(db, USERS), ...constraints)
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as AppUser)
+  const result = await db.collection(USERS)
+    .where(whereCondition)
+    .orderBy('createdAt', 'desc')
+    .get()
+  return (result.data || []).map(
+    (doc: any) => ({ uid: doc._id, ...doc }) as AppUser,
+  )
 }
 
 export async function listPendingAdminApplications(): Promise<AppUser[]> {
   const db = requireDb()
-  const q = query(
-    collection(db, USERS),
-    where('role', '==', 'admin'),
-    where('accountStatus', '==', 'pending_approval'),
-    orderBy('createdAt', 'desc'),
+  const result = await db.collection(USERS)
+    .where({ role: 'admin', accountStatus: 'pending_approval' })
+    .orderBy('createdAt', 'desc')
+    .get()
+  return (result.data || []).map(
+    (doc: any) => ({ uid: doc._id, ...doc }) as AppUser,
   )
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as AppUser)
 }
 
 export async function updateAccountStatus(uid: string, status: AccountStatus): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, USERS, uid), {
+  await db.collection(USERS).doc(uid).update({
     accountStatus: status,
-    updatedAt: serverTimestamp(),
+    updatedAt: new Date(),
   })
 }

@@ -18,7 +18,7 @@ import type { TeamContent } from '@/types/team'
 
 const STAGGER_DELAYS = [0, 100, 200, 300, 400] as const
 
-/* ---------- Default Content (fallback when Firestore is empty) ---------- */
+/* ---------- Default Content (fallback when database is empty) ---------- */
 
 const DEFAULT_CONTENT: Omit<TeamContent, 'updatedAt'> = {
   pillars: [

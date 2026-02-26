@@ -150,8 +150,8 @@ export default function VendorDashboardPage() {
 
   const recentSubmissions = useMemo(() => {
     const sorted = [...submissions].sort((a, b) => {
-      const aTime = a.submittedAt?.toDate?.()?.getTime?.() ?? 0
-      const bTime = b.submittedAt?.toDate?.()?.getTime?.() ?? 0
+      const aTime = a.submittedAt ? new Date(a.submittedAt).getTime() : 0
+      const bTime = b.submittedAt ? new Date(b.submittedAt).getTime() : 0
       return bTime - aTime
     })
     return sorted.slice(0, 5)

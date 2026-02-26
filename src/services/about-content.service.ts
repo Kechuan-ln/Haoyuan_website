@@ -1,27 +1,22 @@
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 import type { AboutContent } from '@/types/about'
 
-const DOC_PATH = 'content/about'
+const COLLECTION = 'content'
+const DOC_ID = 'about'
 
 export async function getAboutContent(): Promise<AboutContent | null> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, DOC_PATH))
-  if (!snap.exists()) return null
-  return snap.data() as AboutContent
+  const result = await db.collection(COLLECTION).doc(DOC_ID).get()
+  if (!result.data || result.data.length === 0) return null
+  return result.data[0] as AboutContent
 }
 
 export async function updateAboutContent(
   data: Omit<AboutContent, 'updatedAt'>,
 ): Promise<void> {
   const db = requireDb()
-  await setDoc(doc(db, DOC_PATH), {
+  await db.collection(COLLECTION).doc(DOC_ID).set({
     ...data,
-    updatedAt: serverTimestamp(),
+    updatedAt: new Date(),
   })
 }

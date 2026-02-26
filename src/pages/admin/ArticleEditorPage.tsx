@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, Eye, FileText, Loader2, Send, AlertTriangle, Info } from 'lucide-react'
-import { serverTimestamp, type Timestamp } from 'firebase/firestore'
 import { ROUTES } from '@/config/routes'
 import { getArticle, createArticle, updateArticle } from '@/services/articles.service'
 import { submitForReview, publishDirectly } from '@/services/workflow.service'
@@ -53,7 +52,7 @@ export default function ArticleEditorPage() {
   // Pending review lockout for workers
   const isLockedForWorker = isWorker && contentStatus === 'pending_review'
 
-  // Load article data from Firestore in edit mode
+  // Load article data from database in edit mode
   useEffect(() => {
     if (!id) return
     async function load() {
@@ -189,7 +188,7 @@ export default function ArticleEditorPage() {
         authorName: appUser?.displayName ?? '管理员',
         isPublished: true,
         status: 'published' as ContentStatus,
-        publishedAt: serverTimestamp() as unknown as Timestamp,
+        publishedAt: new Date(),
       }
       if (isEditMode && id) {
         await updateArticle(id, articleData)

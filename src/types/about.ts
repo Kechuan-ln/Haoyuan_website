@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
-
 export interface CoreValue {
   title: string
   iconName: string
@@ -23,5 +21,5 @@ export interface AboutContent {
   coreValues: CoreValue[]
   threePromises: ThreePromise[]
   milestones: Milestone[]
-  updatedAt?: Timestamp
+  updatedAt?: Date
 }

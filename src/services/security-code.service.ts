@@ -1,7 +1,7 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 
-const SECURITY_DOC = 'settings/security'
+const COLLECTION = 'settings'
+const DOC_ID = 'security'
 
 function generateCode(length = 8): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -14,25 +14,35 @@ function generateCode(length = 8): string {
 
 export async function validateInviteCode(code: string): Promise<boolean> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, SECURITY_DOC))
-  if (!snap.exists()) return false
-  return snap.data().managerInviteCode === code
+  const result = await db.collection(COLLECTION).doc(DOC_ID).get()
+  if (!result.data || result.data.length === 0) return false
+  return result.data[0].managerInviteCode === code
 }
 
 export async function getManagerInviteCode(): Promise<{ code: string; updatedAt: unknown } | null> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, SECURITY_DOC))
-  if (!snap.exists()) return null
-  const data = snap.data()
+  const result = await db.collection(COLLECTION).doc(DOC_ID).get()
+  if (!result.data || result.data.length === 0) return null
+  const data = result.data[0]
   return { code: data.managerInviteCode ?? '', updatedAt: data.updatedAt }
 }
 
 export async function regenerateInviteCode(): Promise<string> {
   const db = requireDb()
   const newCode = generateCode()
-  await setDoc(doc(db, SECURITY_DOC), {
-    managerInviteCode: newCode,
-    updatedAt: serverTimestamp(),
-  }, { merge: true })
+  // Use update for merge behavior (only update specified fields)
+  const result = await db.collection(COLLECTION).doc(DOC_ID).get()
+  if (!result.data || result.data.length === 0) {
+    // Document doesn't exist yet, create it
+    await db.collection(COLLECTION).doc(DOC_ID).set({
+      managerInviteCode: newCode,
+      updatedAt: new Date(),
+    })
+  } else {
+    await db.collection(COLLECTION).doc(DOC_ID).update({
+      managerInviteCode: newCode,
+      updatedAt: new Date(),
+    })
+  }
   return newCode
 }

@@ -1,4 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
 import type { ContentType } from './content-status'
 
 export type NotificationType =
@@ -20,5 +19,5 @@ export interface Notification {
   toUserId: string
   message: string
   isRead: boolean
-  createdAt: Timestamp
+  createdAt: Date
 }

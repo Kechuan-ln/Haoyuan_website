@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
-
 export interface ContactMessage {
   id: string
   name: string
@@ -9,7 +7,7 @@ export interface ContactMessage {
   subject: string
   message: string
   isRead: boolean
-  createdAt: Timestamp
+  createdAt: Date
 }
 
 export interface SiteSettings {

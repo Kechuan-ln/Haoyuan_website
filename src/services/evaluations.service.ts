@@ -1,17 +1,4 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
-import type { UpdateData } from 'firebase/firestore'
-import { requireDb } from '@/config/firebase'
+import { requireDb } from '@/config/cloudbase'
 import type { Evaluation } from '@/types/bid'
 
 const EVALUATIONS = 'evaluations'
@@ -20,41 +7,47 @@ export async function getEvaluationsForBid(
   bidId: string,
 ): Promise<Evaluation[]> {
   const db = requireDb()
-  const q = query(collection(db, EVALUATIONS), where('bidId', '==', bidId))
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evaluation)
+  const result = await db
+    .collection(EVALUATIONS)
+    .where({ bidId })
+    .get()
+  return (result.data || []).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as Evaluation,
+  )
 }
 
 export async function getEvaluationsForSubmission(
   submissionId: string,
 ): Promise<Evaluation[]> {
   const db = requireDb()
-  const q = query(
-    collection(db, EVALUATIONS),
-    where('submissionId', '==', submissionId),
+  const result = await db
+    .collection(EVALUATIONS)
+    .where({ submissionId })
+    .get()
+  return (result.data || []).map(
+    (doc: any) => ({ id: doc._id, ...doc }) as Evaluation,
   )
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evaluation)
 }
 
 export async function getEvaluation(
   id: string,
 ): Promise<Evaluation | null> {
   const db = requireDb()
-  const snap = await getDoc(doc(db, EVALUATIONS, id))
-  if (!snap.exists()) return null
-  return { id: snap.id, ...snap.data() } as Evaluation
+  const result = await db.collection(EVALUATIONS).doc(id).get()
+  if (!result.data || result.data.length === 0) return null
+  const doc = result.data[0]
+  return { id: doc._id, ...doc } as Evaluation
 }
 
 export async function createEvaluation(
   data: Omit<Evaluation, 'id' | 'evaluatedAt'>,
 ): Promise<string> {
   const db = requireDb()
-  const ref = await addDoc(collection(db, EVALUATIONS), {
+  const result = await db.collection(EVALUATIONS).add({
     ...data,
-    evaluatedAt: serverTimestamp(),
+    evaluatedAt: new Date(),
   })
-  return ref.id
+  return (result as any).id as string
 }
 
 export async function updateEvaluation(
@@ -62,12 +55,12 @@ export async function updateEvaluation(
   data: Partial<Omit<Evaluation, 'id'>>,
 ): Promise<void> {
   const db = requireDb()
-  await updateDoc(doc(db, EVALUATIONS, id), {
+  await db.collection(EVALUATIONS).doc(id).update({
     ...data,
-  } as UpdateData<Evaluation>)
+  })
 }
 
 export async function deleteEvaluation(id: string): Promise<void> {
   const db = requireDb()
-  await deleteDoc(doc(db, EVALUATIONS, id))
+  await db.collection(EVALUATIONS).doc(id).remove()
 }

@@ -9,7 +9,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import ContentStatusBadge from '@/components/shared/ContentStatusBadge'
 import type { Article, ArticleCategory } from '@/types/article'
 import type { ContentStatus } from '@/types/content-status'
-import type { Timestamp } from 'firebase/firestore'
 
 const CATEGORY_TABS: { value: string; label: string }[] = [
   { value: 'all', label: '全部' },
@@ -34,9 +33,9 @@ const CATEGORY_BADGE_MAP: Record<ArticleCategory, { label: string; className: st
   company: { label: '企业动态', className: 'bg-green-50 text-green-700' },
 }
 
-function formatDisplayDate(ts: Timestamp | null): string {
+function formatDisplayDate(ts: Date | null): string {
   if (!ts) return '未发布'
-  const d = ts.toDate()
+  const d = ts instanceof Date ? ts : new Date(ts)
   return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日`
 }
 

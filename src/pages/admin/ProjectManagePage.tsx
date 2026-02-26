@@ -199,8 +199,8 @@ export default function ProjectManagePage() {
           id: newId,
           ...payload,
           slug: form.slug || form.title.toLowerCase().replace(/\s+/g, '-'),
-          createdAt: { toDate: () => new Date() } as Project['createdAt'],
-          updatedAt: { toDate: () => new Date() } as Project['updatedAt'],
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }
         setProjects((prev) => [newProject, ...prev])
       }
@@ -316,8 +316,8 @@ export default function ProjectManagePage() {
           id: newId,
           ...payload,
           slug: form.slug || form.title.toLowerCase().replace(/\s+/g, '-'),
-          createdAt: { toDate: () => new Date() } as Project['createdAt'],
-          updatedAt: { toDate: () => new Date() } as Project['updatedAt'],
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }
         setProjects((prev) => [newProject, ...prev])
       }

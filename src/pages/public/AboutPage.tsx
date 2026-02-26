@@ -15,7 +15,7 @@ import AnimatedSection from '@/components/shared/AnimatedSection'
 import CTASection from '@/components/shared/CTASection'
 import type { AboutContent } from '@/types/about'
 
-/* ---------- Default Content (fallback when Firestore is empty) ---------- */
+/* ---------- Default Content (fallback when database is empty) ---------- */
 
 const DEFAULT_CONTENT: Omit<AboutContent, 'updatedAt'> = {
   coreValues: [

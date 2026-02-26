@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
-
 export type UserRole = 'vendor' | 'admin' | 'reviewer'
 
 export type AdminLevel = 'manager' | 'worker'
@@ -12,7 +10,7 @@ export interface AdminApplication {
   realName: string
   position: string
   reason: string
-  appliedAt: Timestamp
+  appliedAt: Date
 }
 
 export interface VendorProfile {
@@ -35,6 +33,6 @@ export interface AppUser {
   adminApplication?: AdminApplication
   companyName?: string
   registrationReason?: string
-  createdAt: Timestamp
-  updatedAt: Timestamp
+  createdAt: Date
+  updatedAt: Date
 }

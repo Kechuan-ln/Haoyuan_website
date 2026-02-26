@@ -1,70 +1,66 @@
 # Session: digital-platform
-Updated: 2026-02-25T12:29:38.627Z
+Updated: 2026-02-27T07:40:00Z
 
 ## Goal
-建设公司数字平台。Done = 三大模块全部可用 + 已部署。
+建设公司数字平台。Done = 三大模块全部可用 + CloudBase 部署 + 国内可访问。
 
 ## State
-- [x] Phase 1–8: 官网 + 管理后台 + 招投标 + CI/CD + 管理员分级 + 内容动态化 + 移动端响应式
-- [x] CMS 完整性 + Dashboard 真实动态 + 资质种子数据 + Firestore 复合索引
-- [x] 公开页面 UI 优化 — AnimatedSection/HeroSection/CTASection + 滚动动画
-- [x] 内容审批流 + 通知系统 (8155f5f) — draft→pending→published, NotificationBell, ReviewQueuePage
-- [x] 首页轮播图动态化 (4d35cab) — HeroCarousel 消费 Firestore heroSlides
-- [x] 多角色注册管理系统 (7 phases 全部完成):
-  - Phase 1–7 + Bug fix 详见上一版本
-- [x] 已部署 (hosting + firestore:rules + firestore:indexes)
-- [x] Bug fix: getBids() 无过滤器导致 vendor/公开页 Firestore 权限拒绝
-  - 根因: Firestore rules 不是过滤器，非 admin 查询需 status `in` 约束
-  - 修复: BidFilters 新增 statusIn，VendorDashboardPage/VendorMyBidsPage/BidHallPage 使用 statusIn 过滤
-  - 新增修改文件: src/services/bids.service.ts, src/pages/vendor/VendorMyBidsPage.tsx, src/pages/bidding/BidHallPage.tsx
-- Now: [→] 端到端测试验证（供应商密码已通过忘记密码重置解决）
+- [x] Phase 1–8: 官网 + 管理后台 + 招投标 + CI/CD + 管理员分级 + 内容动态化
+- [x] 内容审批流 + 通知系统 + 首页轮播图 + 多角色注册管理
+- [x] Firebase → CloudBase 代码迁移 (62 files, 全部 Phase 完成):
+  - Phase 1: cloudbase.ts + 11 types (Timestamp→Date) + format.ts
+  - Phase 2: auth.service (2-step OTP signup) + AuthContext + RegisterPage (OTP UI) + LoginPage
+  - Phase 3: 8 simple DB services
+  - Phase 4: 7 complex DB services (articles/offset pagination, notifications/batch, bids/in-query)
+  - Phase 5: storage.service (upload/download/delete via CloudBase)
+  - Phase 6: 15 pages + 1 component (remove .toDate(), adapt pagination)
+  - Phase 10: 移除 firebase npm 包 + 删除 firebase.ts/firebase.json/firestore.rules 等
+- [x] `npm run build` 零错误 | src/ 中零 Firebase 引用
+- Now: [→] 等待用户确认 → 提交代码
 - Next:
-  - [ ] 提交所有未提交的改动
-  - [ ] 关于页「企业形象展示」：占位符 → 公司实体照片
+  - [ ] CloudBase 安全规则 (控制台手动配置)
+  - [ ] 数据迁移 (Firebase → CloudBase)
+  - [ ] CloudBase Hosting 部署 + 端到端测试
+  - [ ] 移动端响应式
 
 ## Key Decisions
-- Firebase 条件初始化：无 .env 时跳过不崩溃
 - 三套布局: PublicLayout / AdminLayout / PortalLayout
 - AdminLevel: manager/worker，无字段默认 manager（兼容旧数据）
 - accountStatus 可选，默认 'active'（旧 admin 零迁移）
-- 安全码明文存 Firestore（rules 无法 hash），settings/security 仅 manager 可读
-- 注册时不自动通知 manager（避免非 admin 写 notification rules），靠 badge 发现
-- _inviteCode 审计字段持久保留在用户文档
-- 所有注册（含供应商）均 signOut + 显示成功页 → 跳转登录页（避免 AuthContext race condition）
-- signUp 中 setDoc 失败时 deleteUser 清理孤儿 Auth 用户
-- 审批流通知: 站内轮询（60s），不做邮件/短信
-- **getBids 必须带 statusIn 过滤**: 非 admin 用户查询 bids 集合必须带 `where('status', 'in', [...])` 约束，否则 Firestore 拒绝
+- CloudBase 配置: env=quancheng-6gqxv3yz867d2966, region=ap-guangzhou
+- **注册改为 2 步**: signUp → OTP 验证 → 写用户文档 → 登出
+- **分页改为 offset**: articles 从 DocumentSnapshot 游标改为 skip/limit
+- **writeBatch → 条件更新**: notifications 批量标记已读用 .where().update()
+- **Timestamp → Date**: 全局替换，CloudBase 返回 Date 对象
+- **存储**: uploadFile → getTempFileURL(1年) 返回临时URL
+- **AuthContext.user.uid**: 保持 uid 字段名兼容 20+ 消费组件
+- **.add() 返回 id**: CloudBase SDK 类型缺少 id 字段，用 `as unknown as { id: string }` 桥接
+
+## Constraints
+- CloudBase Web SDK 同步初始化，全局单例
+- 注册必须经过 OTP 邮箱验证
+- 安全规则需在控制台手动配置（非代码部署）
+- 数据迁移需通知用户重新注册（密码 hash 不可迁移）
 
 ## Working Set
-- Branch: main (未提交改动) | GitHub: Kechuan-ln/Haoyuan_website
-- Firebase: haoyuan-web | URL: https://haoyuan-web.web.app
+- Branch: worktree-tengxunyun (worktree) | GitHub: Kechuan-ln/Haoyuan_website
+- CloudBase: quancheng-6gqxv3yz867d2966 | Region: ap-guangzhou
 - Build: npm run build | Dev: npm run dev (localhost:5173)
-- Deploy: firebase deploy --only hosting,firestore:rules,firestore:indexes
-
-## 已修改文件 (未提交)
-- src/types/user.ts, notification.ts
-- src/config/constants.ts, routes.ts
-- src/services/auth.service.ts, security-code.service.ts (新), users.service.ts, notifications.service.ts, bids.service.ts
-- src/contexts/AuthContext.tsx
-- src/components/shared/ProtectedRoute.tsx, NotificationBell.tsx
-- src/components/layout/PortalLayout.tsx
-- src/pages/auth/RegisterPage.tsx, LoginPage.tsx, AccountPendingPage.tsx (新)
-- src/pages/admin/UserManagePage.tsx, SiteSettingsPage.tsx
-- src/pages/vendor/VendorDashboardPage.tsx, VendorMyBidsPage.tsx
-- src/pages/bidding/BidHallPage.tsx
-- src/App.tsx
-- firestore.rules, firestore.indexes.json
+- Deploy: tcb hosting deploy ./dist -e quancheng-6gqxv3yz867d2966
 
 ## Architecture Quick Ref
-- src/types/           content-status.ts, notification.ts, user.ts (AccountStatus, AdminApplication)
-- src/services/        auth.service (SignUpOptions), security-code.service, bids.service (BidFilters.statusIn), workflow.service, notifications.service
-- src/components/shared/ NotificationBell (6 notification types), ProtectedRoute (accountStatus gate)
-- src/pages/auth/      RegisterPage (3 tabs), AccountPendingPage, LoginPage (accountStatus redirect)
-- src/pages/admin/     UserManagePage (待审批 tab), SiteSettingsPage (安全码管理), ReviewQueuePage
-- settings/site — 公开读 | settings/security — manager 读写 (managerInviteCode)
+- src/config/cloudbase.ts — requireApp/requireAuth/requireDb
+- src/services/auth.service.ts — signUpStep1 (OTP) + signUpStep2 (verify+write)
+- src/contexts/AuthContext.tsx — onAuthStateChange + CloudBaseUser {uid, email}
+- src/pages/auth/RegisterPage.tsx — 3 tabs + OTP step + countdown resend
+- src/services/articles.service.ts — offset pagination (skip/limit, hasMore)
+- src/services/notifications.service.ts — .where().update() for batch
 
-## Firestore Collections
-- users/{id} — 新增: accountStatus?, adminApplication?, companyName?, registrationReason?, _inviteCode?
-- notifications/{id} — contentType/contentId 改为可选, 新增 account_approved/rejected/admin_application 类型
-- settings/security — managerInviteCode, updatedAt (仅 manager 可读写)
-- Indexes: users (role + accountStatus + createdAt DESC) 新增
+## CloudBase Collections (same as old Firestore)
+- users/{id} — accountStatus?, adminApplication?, companyName?, _inviteCode?
+- notifications/{id} — 6 notification types, toUserId + isRead
+- settings/security — managerInviteCode (仅 manager 可读写)
+- articles, projects, services, qualifications — status + isPublished workflow
+- bids, bidSubmissions, evaluations — 招投标系统
+- content/home, content/about, content/team — CMS 单文档
+- heroSlides — 首页轮播图
