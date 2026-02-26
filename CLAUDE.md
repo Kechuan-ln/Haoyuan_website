@@ -53,3 +53,29 @@ src/
 - [x] Phase 6: CI/CD + 代码分割 + SEO
 - [x] Phase 7: 管理员分级 + 内容动态化
 - [ ] 移动端响应式
+
+---
+
+## !! 进行中: Firebase → 腾讯云 CloudBase 迁移
+
+> **原因**: Firebase (Google) 服务被 GFW 屏蔽，国内用户无法使用
+> **迁移方案**: `RPD-firebase-to-cloudbase-migration.md`（项目根目录，11 个 Phase 的完整方案）
+> **远程分支**: `tengxunyun`（GitHub，禁止合并到 main 直至所有测试通过）
+
+### 规则
+- **所有迁移代码改动必须在 worktree 中进行，禁止直接修改 main 分支**
+- main 分支保持 Firebase 版本，作为回滚保险
+- 每个 Phase 完成后，Claude 必须:
+  1. 完成该 Phase 的所有代码改动
+  2. 通过 `npm run build` 编译检查（零错误）
+  3. 通过该 Phase 对应的自动化测试（如有）
+  4. 询问用户是否需要在本地进行额外手动测试（如浏览器验证）
+  5. 所有测试通过后，询问用户是否可以提交到 worktree
+- 未经用户确认，不得提交任何改动
+
+### 迁移目标
+- Firebase Auth → CloudBase Auth (`@cloudbase/js-sdk`)
+- Firestore → CloudBase 云数据库 (MongoDB-based)
+- Firebase Storage → CloudBase 云存储
+- Firebase Hosting → CloudBase 静态网站托管
+- Firestore Rules (复杂规则) → CloudBase 简化规则 + 云函数
