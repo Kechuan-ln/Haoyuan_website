@@ -25,7 +25,6 @@ export async function signUpStep1(options: SignUpOptions) {
     email: options.email,
     password: options.password,
     name: options.displayName,
-    phone_number: options.phone,
   })
 
   if (error) throw error

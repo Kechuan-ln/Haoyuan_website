@@ -1,4 +1,4 @@
-import { requireDb } from '@/config/cloudbase'
+import { requireDb, ensureAuth } from '@/config/cloudbase'
 
 const COLLECTION = 'settings'
 const DOC_ID = 'security'
@@ -13,8 +13,14 @@ function generateCode(length = 8): string {
 }
 
 export async function validateInviteCode(code: string): Promise<boolean> {
+  await ensureAuth()
   const db = requireDb()
   const result = await db.collection(COLLECTION).doc(DOC_ID).get()
+  // CloudBase 错误通过 result.code 返回
+  if (typeof (result as unknown as { code: string }).code === 'string') {
+    console.error('[validateInviteCode] 数据库查询失败:', result)
+    return false
+  }
   if (!result.data || result.data.length === 0) return false
   return result.data[0].managerInviteCode === code
 }
@@ -22,6 +28,10 @@ export async function validateInviteCode(code: string): Promise<boolean> {
 export async function getManagerInviteCode(): Promise<{ code: string; updatedAt: unknown } | null> {
   const db = requireDb()
   const result = await db.collection(COLLECTION).doc(DOC_ID).get()
+  if (typeof (result as unknown as { code: string }).code === 'string') {
+    console.error('[getManagerInviteCode] 数据库查询失败:', result)
+    return null
+  }
   if (!result.data || result.data.length === 0) return null
   const data = result.data[0]
   return { code: data.managerInviteCode ?? '', updatedAt: data.updatedAt }
@@ -30,10 +40,8 @@ export async function getManagerInviteCode(): Promise<{ code: string; updatedAt:
 export async function regenerateInviteCode(): Promise<string> {
   const db = requireDb()
   const newCode = generateCode()
-  // Use update for merge behavior (only update specified fields)
   const result = await db.collection(COLLECTION).doc(DOC_ID).get()
   if (!result.data || result.data.length === 0) {
-    // Document doesn't exist yet, create it
     await db.collection(COLLECTION).doc(DOC_ID).set({
       managerInviteCode: newCode,
       updatedAt: new Date(),
